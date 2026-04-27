@@ -1,0 +1,20 @@
+{
+  "name": "Val Thorens Ops",
+  "short_name": "VT Ops",
+  "description": "ניהול ובדיקת דירות בוואל טורנס",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

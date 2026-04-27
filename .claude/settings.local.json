@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(rm -rf node_modules package-lock.json)",
+      "Bash(npm install *)",
+      "Bash(node ./node_modules/next/dist/bin/next build)",
+      "Bash(curl -s -o /dev/null -w \"Home: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"Dashboard: %{http_code}\\\\n\" http://localhost:3000/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"Shopping: %{http_code}\\\\n\" http://localhost:3000/shopping-list)",
+      "Bash(curl -s -o /dev/null -w \"Manifest: %{http_code}\\\\n\" http://localhost:3000/manifest.json)",
+      "Bash(curl -s -o /dev/null -w \"Icon: %{http_code}\\\\n\" http://localhost:3000/icons/icon.svg)",
+      "Bash(where gh.exe)"
+    ]
+  }
+}
