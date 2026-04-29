@@ -1,0 +1,2156 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a1628" />
+<title>בדיקת דירות – Val Thorens</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght,SOFT@9..144,300..900,30..100&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans:    ['Heebo', 'system-ui', 'sans-serif'],
+          display: ['Fraunces', 'Heebo', 'serif'],
+        },
+        colors: {
+          ice:    { 50:'#f0f7ff', 100:'#dceaff', 200:'#bdd5ff', 500:'#5a8edb', 600:'#3a6fbf', 700:'#2a4f8a' },
+          night:  { 50:'#e8edf3', 100:'#cdd6e1', 700:'#1a2640', 800:'#11192c', 900:'#0a1628', 950:'#050b18' },
+          copper: { 300:'#e8a47a', 400:'#d98959', 500:'#c87f3e', 600:'#a96827', 700:'#7d4d20' },
+          frost:  { 100:'#f6fafd', 200:'#e6eef7' },
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { height: 100%; }
+  body {
+    font-family: 'Heebo', system-ui, sans-serif;
+    background: radial-gradient(ellipse at top, #11192c 0%, #050b18 60%, #02060f 100%);
+    color: #e6eef7;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(at 12% 8%,  rgba(200,127,62,0.10) 0, transparent 45%),
+      radial-gradient(at 88% 92%, rgba(90,142,219,0.18) 0, transparent 50%),
+      radial-gradient(at 50% 0%,  rgba(220,234,255,0.04) 0, transparent 55%);
+    mix-blend-mode: screen;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.35;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  input, textarea, button, select { font-family: inherit; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .pt-safe { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+
+  /* ============ glass + frost ============ */
+  .glass {
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 40px -20px rgba(0,0,0,0.6);
+  }
+  .glass-strong {
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .display { font-family: 'Fraunces', serif; font-feature-settings: 'ss01','ss02'; letter-spacing: -0.01em; }
+
+  /* ============ animations ============ */
+  @keyframes float-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse-warn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.6); }
+    50%      { box-shadow: 0 0 0 10px rgba(248,113,113,0); }
+  }
+  @keyframes ring-ok {
+    0%   { box-shadow: 0 0 0 0 rgba(52,211,153,0.7); }
+    100% { box-shadow: 0 0 0 14px rgba(52,211,153,0); }
+  }
+  @keyframes drawer-open {
+    from { transform: translateY(-12px); opacity: 0; max-height: 0; }
+    to   { transform: translateY(0);     opacity: 1; max-height: 1200px; }
+  }
+  @keyframes ember {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.06); }
+  }
+  .anim-float-in { animation: float-in 0.55s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .anim-slide-up { animation: slide-up 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .anim-fade-in  { animation: fade-in 0.4s ease both; }
+  .anim-warn     { animation: pulse-warn 1.6s ease-in-out infinite; }
+  .anim-ok       { animation: ring-ok 0.7s ease-out; }
+  .anim-drawer   { animation: drawer-open 0.45s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .anim-ember    { animation: ember 2.4s ease-in-out infinite; }
+
+  /* stagger helpers */
+  .stagger > * { animation: float-in 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .stagger > *:nth-child(1)  { animation-delay: 0.02s; }
+  .stagger > *:nth-child(2)  { animation-delay: 0.06s; }
+  .stagger > *:nth-child(3)  { animation-delay: 0.10s; }
+  .stagger > *:nth-child(4)  { animation-delay: 0.14s; }
+  .stagger > *:nth-child(5)  { animation-delay: 0.18s; }
+  .stagger > *:nth-child(6)  { animation-delay: 0.22s; }
+  .stagger > *:nth-child(7)  { animation-delay: 0.26s; }
+  .stagger > *:nth-child(8)  { animation-delay: 0.30s; }
+  .stagger > *:nth-child(9)  { animation-delay: 0.34s; }
+  .stagger > *:nth-child(10) { animation-delay: 0.38s; }
+  .stagger > *:nth-child(n+11) { animation-delay: 0.42s; }
+
+  /* tilt */
+  .tilt { transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1); transform-style: preserve-3d; }
+  .tilt:hover { transform: perspective(800px) rotateX(2deg) rotateY(-2deg) translateY(-2px); }
+
+  /* room tile glow */
+  .room-tile {
+    position: relative;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transform-style: preserve-3d;
+  }
+  .room-tile:hover { transform: translateY(-3px) scale(1.01); }
+  .room-tile::after {
+    content: ''; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,40%), rgba(255,255,255,0.18), transparent 55%);
+    opacity: 0; transition: opacity 0.35s ease;
+  }
+  .room-tile:hover::after { opacity: 1; }
+
+  /* ===== status item ===== */
+  .item-card {
+    position: relative;
+    transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .item-card:active { transform: scale(0.97); }
+
+  /* counter top illustration */
+  .counter-grain {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 6px);
+  }
+
+  /* progress arc gradient stroke */
+  .ring-glow {
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+
+  /* hide scrollbar in horizontal scrollers */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+
+  /* ===== print ===== */
+  @media print {
+    body, body::before, body::after { background: white !important; color: #111 !important; }
+    .no-print { display: none !important; }
+    .glass, .glass-strong { background: white !important; backdrop-filter: none !important; border: 1px solid #ddd !important; box-shadow: none !important; color: #111 !important; }
+  }
+
+  /* boot loader */
+  .boot-orb {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #e8a47a, #c87f3e 45%, #7d4d20 95%);
+    box-shadow: 0 0 60px 10px rgba(200,127,62,0.5), 0 0 140px 30px rgba(90,142,219,0.18);
+    animation: ember 2.4s ease-in-out infinite;
+  }
+</style>
+</head>
+<body class="antialiased">
+<div id="root" class="min-h-screen relative z-10"></div>
+
+<div id="boot" class="fixed inset-0 flex items-center justify-center z-50">
+  <div class="text-center">
+    <div class="boot-orb mx-auto"></div>
+    <p class="mt-6 text-ice-100 display text-lg tracking-widest">Val Thorens</p>
+    <p class="mt-1 text-ice-200/60 text-xs">טוען מערכת בדיקות…</p>
+  </div>
+</div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.fog.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback, Fragment } = React;
+
+/* =========================================================
+   1. STATIC DATA  (preserved from v1)
+   ========================================================= */
+
+const INITIAL_PROPERTIES = [
+  { id: 'olympiades-112',     name: 'Olympiades 112',     capacity: 2, doubleBeds: 1 },
+  { id: 'neves-194',          name: 'Neves 194',          capacity: 6, doubleBeds: 0 },
+  { id: 'la-vanoise-473',     name: 'La Vanoise 473',     capacity: 3, doubleBeds: 1 },
+  { id: 'neves-67',           name: 'Neves 67',           capacity: 5, doubleBeds: 0 },
+  { id: 'altineige-28',       name: 'Altineige 28',       capacity: 5, doubleBeds: 0 },
+  { id: 'glaciers-7',         name: 'Glaciers 7',         capacity: 5, doubleBeds: 0 },
+  { id: 'glaciers-31',        name: 'Glaciers 31',        capacity: 4, doubleBeds: 0 },
+  { id: 'machu-801',          name: 'Machu 801',          capacity: 5, doubleBeds: 0 },
+  { id: 'machu-803',          name: 'Machu 803',          capacity: 5, doubleBeds: 0 },
+  { id: 'pichu-408',          name: 'Pichu 408',          capacity: 5, doubleBeds: 0 },
+  { id: 'cusco-h26',          name: 'Cusco H26',          capacity: 6, doubleBeds: 0 },
+  { id: 'machu-603',          name: 'Machu 603',          capacity: 5, doubleBeds: 0 },
+  { id: 'altineige-208',      name: 'Altineige 208',      capacity: 4, doubleBeds: 0 },
+  { id: 'altineige-203',      name: 'Altineige 203',      capacity: 5, doubleBeds: 0 },
+  { id: 'le-serac-j10',       name: 'Le Sérac J10',       capacity: 2, doubleBeds: 2 },
+  { id: 'dome-de-polset-315', name: 'Dome de Polset 315', capacity: 3, doubleBeds: 0 },
+  { id: 'cime-de-caron-1304', name: 'Cime De Caron 1304', capacity: 5, doubleBeds: 1 },
+  { id: 'joker-c3',           name: 'Joker C3',           capacity: 6, doubleBeds: 2 },
+  { id: 'joker-c4',           name: 'Joker C4',           capacity: 6, doubleBeds: 2 },
+  { id: 'joker-c8',           name: 'Joker C8',           capacity: 6, doubleBeds: 2 },
+  { id: 'joker-16',           name: 'Joker 16',           capacity: 6, doubleBeds: 2 },
+  { id: 'joker-b3',           name: 'Joker B3',           capacity: 3, doubleBeds: 0 },
+  { id: 'joker-b4',           name: 'Joker B4',           capacity: 3, doubleBeds: 1 },
+  { id: 'joker-b6',           name: 'Joker B6',           capacity: 3, doubleBeds: 1 },
+  { id: 'arcelle-304',        name: 'Arcelle 304',        capacity: 6, doubleBeds: 0 },
+  { id: 'cusco-e18',          name: 'Cusco E18',          capacity: 6, doubleBeds: 0 },
+  { id: 'cusco-e19',          name: 'Cusco E19',          capacity: 6, doubleBeds: 0 },
+  { id: 'cusco-e20',          name: 'Cusco E20',          capacity: 6, doubleBeds: 0 },
+  { id: 'le-serac-k10',       name: 'Le Sérac K10',       capacity: 6, doubleBeds: 1 },
+  { id: 'cusco-k4',           name: 'Cusco K4',           capacity: 6, doubleBeds: 0 },
+  { id: 'lauzieres-612',      name: 'Lauzières 612',      capacity: 6, doubleBeds: 1 },
+];
+
+const KITCHEN_MULTIPLIERS = [
+  { key: 'knives',      label: 'סכינים',  emoji: '🔪', perPerson: 2 },
+  { key: 'forks',       label: 'מזלגות',  emoji: '🍴', perPerson: 2 },
+  { key: 'spoons',      label: 'כפות',    emoji: '🥄', perPerson: 2 },
+  { key: 'smallSpoons', label: 'כפיות',   emoji: '☕', perPerson: 2 },
+  { key: 'plates',      label: 'צלחות',   emoji: '🍽️', perPerson: 2 },
+  { key: 'bowls',       label: 'קערות',   emoji: '🥣', perPerson: 2 },
+  { key: 'glasses',     label: 'כוסות',   emoji: '🥃', perPerson: 2 },
+];
+
+const KITCHEN_FIXED = [
+  { key: 'pans',          label: 'מחבתות',     emoji: '🍳', count: 2 },
+  { key: 'pots',          label: 'סירים',      emoji: '🍲', count: 2 },
+  { key: 'kettle',        label: 'קומקום',     emoji: '🫖' },
+  { key: 'microwave',     label: 'מיקרוגל',    emoji: '📦' },
+  { key: 'fridge',        label: 'מקרר',       emoji: '🧊' },
+  { key: 'oven',          label: 'תנור',       emoji: '🔥' },
+  { key: 'stove',         label: 'כיריים',     emoji: '🍳' },
+  { key: 'dishwasher',    label: 'מדיח כלים',  emoji: '💧' },
+  { key: 'coffeeMachine', label: 'מכונת קפה',  emoji: '☕' },
+  { key: 'toaster',       label: 'מצנם',       emoji: '🍞' },
+];
+
+const DINING_ITEMS = [
+  { key: 'table',  label: 'שולחן אוכל', emoji: '🪑' },
+  { key: 'chairs', label: 'כיסאות',     emoji: '💺', perPerson: 1 },
+  { key: 'lights', label: 'תאורת אוכל',  emoji: '💡' },
+  { key: 'sofa',   label: 'ספה',         emoji: '🛋️' },
+  { key: 'tv',     label: 'טלוויזיה',    emoji: '📺' },
+];
+
+const BATHROOM_ITEMS = [
+  { key: 'shower',     label: 'מקלחת',       emoji: '🚿' },
+  { key: 'toilet',     label: 'אסלה',        emoji: '🚽' },
+  { key: 'sink',       label: 'כיור',        emoji: '🚰' },
+  { key: 'mirror',     label: 'מראה',        emoji: '🪞' },
+  { key: 'towels',     label: 'מגבות',       emoji: '🧺', perPerson: 1 },
+  { key: 'hairDryer',  label: 'מייבש שיער', emoji: '💨' },
+  { key: 'ventilation',label: 'איוורור',     emoji: '🌬️' },
+];
+
+const GENERAL_ITEMS = [
+  { key: 'mattresses', label: 'מזרנים',  emoji: '🛏️', perPerson: 1 },
+  { key: 'pillows',    label: 'כריות',   emoji: '🪶', perPerson: 1 },
+  { key: 'blankets',   label: 'שמיכות',  emoji: '🛌', perPerson: 1 },
+  { key: 'heating',    label: 'חימום',   emoji: '♨️' },
+  { key: 'bulbs',      label: 'נורות',   emoji: '💡' },
+  { key: 'curtains',   label: 'וילונות', emoji: '🪟' },
+  { key: 'wifi',       label: 'Wi-Fi',   emoji: '📶' },
+  { key: 'keys',       label: 'מפתחות',  emoji: '🔑' },
+];
+
+const getItemRequired = (item, capacity) => {
+  if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
+  if (item.count && item.count > 1) return { required: item.count, isCountable: true };
+  return { required: 1, isCountable: false };
+};
+
+const EXIT_CHECKLIST = [
+  { key: 'cleanliness',    label: 'בדיקת ניקיון סופית' },
+  { key: 'foodRemoved',    label: 'הוצאת כל המזון מהדירה' },
+  { key: 'fridgeOpen',     label: 'מקרר נשאר פתוח' },
+  { key: 'windowsClosed',  label: 'כל החלונות סגורים' },
+  { key: 'waterShut',      label: 'מים סגורים / אין נזילות' },
+  { key: 'electricityOff', label: 'חשמל / תאורה כבויים' },
+];
+
+const STORAGE_KEYS = {
+  properties:  'valthorens_properties_v1',
+  inspections: 'valthorens_inspections_v1',
+};
+
+/* =========================================================
+   2. ICONS
+   ========================================================= */
+
+const Svg = ({ children, size = 20, className = '', strokeWidth = 2 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+       fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round"
+       strokeLinejoin="round" className={className}>{children}</svg>
+);
+const IconSearch    = (p) => <Svg {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Svg>;
+const IconPlus      = (p) => <Svg {...p}><path d="M5 12h14"/><path d="M12 5v14"/></Svg>;
+const IconTrash     = (p) => <Svg {...p}><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Svg>;
+const IconEdit      = (p) => <Svg {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></Svg>;
+const IconCamera    = (p) => <Svg {...p}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></Svg>;
+const IconCheck     = (p) => <Svg {...p}><path d="M20 6 9 17l-5-5"/></Svg>;
+const IconX         = (p) => <Svg {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Svg>;
+const IconAlert     = (p) => <Svg {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></Svg>;
+const IconSettings  = (p) => <Svg {...p}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></Svg>;
+const IconClipboard = (p) => <Svg {...p}><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M9 18h4"/></Svg>;
+const IconDownload  = (p) => <Svg {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></Svg>;
+const IconChevron   = (p) => <Svg {...p}><path d="m6 9 6 6 6-6"/></Svg>;
+const IconChevRight = (p) => <Svg {...p}><path d="m9 18 6-6-6-6"/></Svg>;
+const IconArrowLeft = (p) => <Svg {...p}><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></Svg>;
+const IconLock      = (p) => <Svg {...p}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Svg>;
+const IconUnlock    = (p) => <Svg {...p}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></Svg>;
+const IconUsers     = (p) => <Svg {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Svg>;
+const IconBed       = (p) => <Svg {...p}><path d="M2 4v16"/><path d="M22 4v16"/><path d="M2 8h20"/><path d="M2 16h20"/><path d="M10 8v8"/></Svg>;
+const IconHome      = (p) => <Svg {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><polyline points="9 22 9 12 15 12 15 22"/></Svg>;
+const IconWrench    = (p) => <Svg {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></Svg>;
+const IconSparkles  = (p) => <Svg {...p}><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></Svg>;
+const IconUtensils  = (p) => <Svg {...p}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></Svg>;
+const IconRefresh   = (p) => <Svg {...p}><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></Svg>;
+const IconPhone     = (p) => <Svg {...p}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></Svg>;
+const IconCopy      = (p) => <Svg {...p}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></Svg>;
+const IconCart      = (p) => <Svg {...p}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></Svg>;
+const IconPrint     = (p) => <Svg {...p}><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></Svg>;
+const IconMountain  = (p) => <Svg {...p}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></Svg>;
+const IconFilter    = (p) => <Svg {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></Svg>;
+
+/* =========================================================
+   3. STORAGE + INSPECTION FACTORY  (preserved logic)
+   ========================================================= */
+
+const safeLoad = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.warn('Storage read failed:', key, e);
+    return fallback;
+  }
+};
+
+const safeSave = (key, val) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch (e) {
+    console.warn('Storage write failed:', key, e);
+    alert('שמירה נכשלה — ייתכן שאחסון המכשיר מלא. נסה למחוק תמונות או לייצא גיבוי.');
+  }
+};
+
+const blankStatus = () => ({ status: 'pending', note: '', presentCount: null });
+
+const createBlankInspection = () => {
+  const fillStatus = (items) => Object.fromEntries(items.map(i => [i.key, blankStatus()]));
+  const fillBool   = (items) => Object.fromEntries(items.map(i => [i.key, false]));
+  return {
+    kitchen: { ...fillStatus(KITCHEN_MULTIPLIERS), ...fillStatus(KITCHEN_FIXED) },
+    dining:   fillStatus(DINING_ITEMS),
+    bathroom: fillStatus(BATHROOM_ITEMS),
+    general:  fillStatus(GENERAL_ITEMS),
+    maintenance: { renovations: '', photos: [] },
+    exit: fillBool(EXIT_CHECKLIST),
+    completed: false,
+    completedAt: null,
+    updatedAt: null,
+  };
+};
+
+const inspectionProgress = (insp) => {
+  if (!insp) return 0;
+  const groups = ['kitchen','dining','bathroom','general'];
+  let total = 0, done = 0;
+  groups.forEach(g => {
+    Object.values(insp[g] || {}).forEach(v => {
+      total += 1;
+      if (v.status && v.status !== 'pending') done += 1;
+    });
+  });
+  const exitTotal = EXIT_CHECKLIST.length;
+  const exitDone  = EXIT_CHECKLIST.filter(i => insp.exit?.[i.key]).length;
+  total += exitTotal; done += exitDone;
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+};
+
+const inspectionHasIssues = (insp) => {
+  if (!insp) return false;
+  const groups = ['kitchen','dining','bathroom','general'];
+  return groups.some(g =>
+    Object.values(insp[g] || {}).some(v => v.status === 'partial' || v.status === 'missing')
+  );
+};
+
+const computeShortage = (value, requiredCount, isMultiplier) => {
+  if (!value || value.status === 'ok' || value.status === 'pending') return 0;
+  if (isMultiplier && requiredCount) {
+    if (value.status === 'missing') return requiredCount;
+    if (value.status === 'partial') {
+      const present = Number(value.presentCount);
+      const safe = Number.isFinite(present) && present >= 0 ? present : 0;
+      return Math.max(0, requiredCount - safe);
+    }
+  }
+  return value.status === 'missing' || value.status === 'partial' ? 1 : 0;
+};
+
+const CATEGORY_META = {
+  kitchen:  { label: 'מטבח',     accent: 'orange'  },
+  dining:   { label: 'אוכל/סלון', accent: 'sky'     },
+  bathroom: { label: 'אמבטיה',   accent: 'purple'  },
+  general:  { label: 'כללי',     accent: 'emerald' },
+};
+
+const computePropertyShortages = (property, inspection) => {
+  if (!inspection) return [];
+  const out = [];
+  const cap = property.capacity;
+  const sources = [
+    { category: 'kitchen',  items: KITCHEN_MULTIPLIERS },
+    { category: 'kitchen',  items: KITCHEN_FIXED },
+    { category: 'dining',   items: DINING_ITEMS },
+    { category: 'bathroom', items: BATHROOM_ITEMS },
+    { category: 'general',  items: GENERAL_ITEMS },
+  ];
+  sources.forEach(({ category, items }) => {
+    items.forEach(item => {
+      const v = inspection[category]?.[item.key];
+      if (!v || v.status === 'ok' || v.status === 'pending') return;
+      const { required, isCountable } = getItemRequired(item, cap);
+      const qty = computeShortage(v, required, isCountable);
+      out.push({ category, key: item.key, label: item.label, status: v.status, note: v.note || '',
+                 required, presentCount: v.presentCount, qty, isMultiplier: isCountable });
+    });
+  });
+  return out;
+};
+
+const computeAggregateShortages = (properties, inspections) => {
+  const map = {};
+  properties.forEach(p => {
+    const list = computePropertyShortages(p, inspections[p.id]);
+    list.forEach(entry => {
+      const id = `${entry.category}:${entry.key}`;
+      if (!map[id]) {
+        map[id] = { itemKey: entry.key, label: entry.label, category: entry.category, totalQty: 0, breakdown: [] };
+      }
+      map[id].totalQty += entry.qty;
+      map[id].breakdown.push({
+        propertyId: p.id, propertyName: p.name,
+        qty: entry.qty, status: entry.status, note: entry.note,
+      });
+    });
+  });
+  return Object.values(map).sort((a, b) => {
+    if (a.category !== b.category) return a.category.localeCompare(b.category);
+    return b.totalQty - a.totalQty;
+  });
+};
+
+const compressImage = (file, maxDim = 1280, quality = 0.7) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) {
+          height = Math.round(height * (maxDim / width));
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round(width * (maxDim / height));
+          height = maxDim;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+/* =========================================================
+   4. ROOM META  (which categories live where)
+   ========================================================= */
+
+const ROOMS = [
+  { key: 'kitchen',     label: 'מטבח',          subtitle: 'כלי אוכל וציוד',     accent: 'copper', glyph: '🍳' },
+  { key: 'dining',      label: 'סלון ופינת אוכל', subtitle: 'ישיבה, שולחן, TV',   accent: 'sky',    glyph: '🛋️' },
+  { key: 'bathroom',    label: 'חדר רחצה',      subtitle: 'מקלחת, אסלה, מגבות',  accent: 'purple', glyph: '🚿' },
+  { key: 'general',     label: 'חדרי שינה',     subtitle: 'מזרנים, כריות, חימום', accent: 'emerald', glyph: '🛏️' },
+  { key: 'maintenance', label: 'תחזוקה',        subtitle: 'נזקים, צילומים',     accent: 'rose',   glyph: '🔧' },
+  { key: 'exit',        label: 'יציאה',         subtitle: '6 בדיקות חובה',      accent: 'amber',  glyph: '🔐' },
+];
+
+const ROOM_ACCENT = {
+  copper:  { glow: 'rgba(217,137,89,0.45)',  ring: 'border-copper-500/50',  text: 'text-copper-300', bg: 'bg-copper-500/10', solid: 'bg-copper-500' },
+  sky:     { glow: 'rgba(56,189,248,0.45)',  ring: 'border-sky-400/50',     text: 'text-sky-300',    bg: 'bg-sky-400/10',    solid: 'bg-sky-500' },
+  purple:  { glow: 'rgba(192,132,252,0.45)', ring: 'border-purple-400/50',  text: 'text-purple-300', bg: 'bg-purple-400/10', solid: 'bg-purple-500' },
+  emerald: { glow: 'rgba(52,211,153,0.45)',  ring: 'border-emerald-400/50', text: 'text-emerald-300',bg: 'bg-emerald-400/10',solid: 'bg-emerald-500' },
+  rose:    { glow: 'rgba(244,114,182,0.45)', ring: 'border-rose-400/50',    text: 'text-rose-300',   bg: 'bg-rose-400/10',   solid: 'bg-rose-500' },
+  amber:   { glow: 'rgba(251,191,36,0.45)',  ring: 'border-amber-400/50',   text: 'text-amber-300',  bg: 'bg-amber-400/10',  solid: 'bg-amber-500' },
+};
+
+const STATUS_VISUAL = {
+  pending: { ring: 'border-white/10',           bg: 'bg-white/[0.03]',  text: 'text-ice-100/70', label: 'לא נבדק', dot: 'bg-white/30' },
+  ok:      { ring: 'border-emerald-400/60',     bg: 'bg-emerald-500/10', text: 'text-emerald-200', label: 'תקין',  dot: 'bg-emerald-400' },
+  partial: { ring: 'border-amber-400/70',       bg: 'bg-amber-500/15',   text: 'text-amber-200',   label: 'חלקי',   dot: 'bg-amber-400' },
+  missing: { ring: 'border-rose-400/70',        bg: 'bg-rose-500/15',    text: 'text-rose-200',    label: 'חסר',    dot: 'bg-rose-400' },
+};
+
+const cycleStatus = (s) => s === 'pending' ? 'ok' : s === 'ok' ? 'partial' : s === 'partial' ? 'missing' : 'pending';
+
+const roomCategoryProgress = (insp, key) => {
+  if (!insp) return { pct: 0, total: 0, done: 0, issues: 0 };
+  if (key === 'kitchen') {
+    const all = [...KITCHEN_MULTIPLIERS, ...KITCHEN_FIXED];
+    const total = all.length;
+    let done = 0, issues = 0;
+    all.forEach(it => {
+      const v = insp.kitchen?.[it.key];
+      if (v?.status && v.status !== 'pending') done += 1;
+      if (v?.status === 'partial' || v?.status === 'missing') issues += 1;
+    });
+    return { pct: total ? Math.round(done/total*100) : 0, total, done, issues };
+  }
+  if (key === 'dining' || key === 'bathroom' || key === 'general') {
+    const items = key === 'dining' ? DINING_ITEMS : key === 'bathroom' ? BATHROOM_ITEMS : GENERAL_ITEMS;
+    let done = 0, issues = 0;
+    items.forEach(it => {
+      const v = insp[key]?.[it.key];
+      if (v?.status && v.status !== 'pending') done += 1;
+      if (v?.status === 'partial' || v?.status === 'missing') issues += 1;
+    });
+    return { pct: items.length ? Math.round(done/items.length*100) : 0, total: items.length, done, issues };
+  }
+  if (key === 'maintenance') {
+    const has = (insp.maintenance?.renovations?.trim()?.length || 0) > 0 || insp.maintenance?.photos?.length > 0;
+    return { pct: has ? 100 : 0, total: 1, done: has ? 1 : 0, issues: 0 };
+  }
+  if (key === 'exit') {
+    const total = EXIT_CHECKLIST.length;
+    const done = EXIT_CHECKLIST.filter(i => insp.exit?.[i.key]).length;
+    return { pct: total ? Math.round(done/total*100) : 0, total, done, issues: 0 };
+  }
+  return { pct: 0, total: 0, done: 0, issues: 0 };
+};
+
+/* =========================================================
+   5. PROGRESS RING
+   ========================================================= */
+
+const ProgressRing = ({ pct, size = 64, stroke = 6, color = '#34d399', track = 'rgba(255,255,255,0.08)', label }) => {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size/2} cy={size/2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
+        <circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth={stroke} fill="none"
+                strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
+                style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.2,0.8,0.2,1)' }}
+                className="ring-glow" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-ice-100">
+        {label ?? `${pct}%`}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   6. STATUS-CYCLING ITEM CARD
+   ========================================================= */
+
+const StatusItem = ({ item, requiredCount, isMultiplier, value, onChange, compact = false }) => {
+  const v = STATUS_VISUAL[value.status || 'pending'];
+  const showStepper = isMultiplier && value.status === 'partial';
+  const shortage    = computeShortage(value, requiredCount, isMultiplier);
+  const [justChanged, setJustChanged] = useState(false);
+
+  const handleTap = () => {
+    onChange({ ...value, status: cycleStatus(value.status || 'pending') });
+    setJustChanged(true);
+    setTimeout(() => setJustChanged(false), 700);
+  };
+
+  return (
+    <div className={`item-card relative rounded-2xl border p-3 transition ${v.ring} ${v.bg} ${justChanged && value.status === 'ok' ? 'anim-ok' : ''} ${value.status === 'missing' ? 'anim-warn' : ''}`}>
+      <button type="button" onClick={handleTap}
+        className="w-full text-right flex items-center gap-3">
+        <div className={`shrink-0 relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${value.status === 'ok' ? 'bg-emerald-500/20' : value.status === 'partial' ? 'bg-amber-500/20' : value.status === 'missing' ? 'bg-rose-500/20' : 'bg-white/[0.04]'}`}>
+          <span>{item.emoji || '•'}</span>
+          <span className={`absolute -bottom-1 -left-1 w-3 h-3 rounded-full ring-2 ring-night-900 ${v.dot}`}/>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="font-bold text-ice-50 truncate">{item.label}</span>
+            {requiredCount != null && isMultiplier && (
+              <span className="text-[11px] text-ice-100/50 font-medium shrink-0">× {requiredCount}</span>
+            )}
+          </div>
+          <div className={`text-xs mt-0.5 ${v.text}`}>
+            {v.label}
+            {shortage > 0 && <span className="mx-2 text-rose-300">· חסרים {shortage}</span>}
+          </div>
+        </div>
+      </button>
+
+      {/* Status quick row (visible all the time, smaller) */}
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        {[
+          { s: 'ok',      label: 'תקין', cls: 'border-emerald-400/40 text-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
+          { s: 'partial', label: 'חלקי', cls: 'border-amber-400/40 text-amber-200',     active: 'bg-amber-500 text-white border-amber-500' },
+          { s: 'missing', label: 'חסר',  cls: 'border-rose-400/40 text-rose-200',       active: 'bg-rose-500 text-white border-rose-500' },
+        ].map(opt => {
+          const isActive = value.status === opt.s;
+          return (
+            <button key={opt.s} type="button" onClick={() => onChange({ ...value, status: opt.s })}
+              className={`py-1.5 rounded-lg border text-[11px] font-bold transition active:scale-95 ${isActive ? opt.active : `bg-white/[0.02] hover:bg-white/[0.05] ${opt.cls}`}`}>
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {showStepper && (() => {
+        const missing = value.presentCount == null ? 1 : Math.max(1, Math.min(requiredCount, requiredCount - (value.presentCount || 0)));
+        const setMissing = (m) => {
+          const clamped = Math.max(1, Math.min(requiredCount, m));
+          onChange({ ...value, presentCount: requiredCount - clamped });
+        };
+        return (
+          <div className="mt-2 flex items-center justify-between gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 anim-fade-in">
+            <span className="text-[11px] font-bold text-amber-200">חסרים</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setMissing(missing - 1)}
+                className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-100 text-xl font-bold hover:bg-amber-500/25 active:scale-90 transition flex items-center justify-center">−</button>
+              <span className="display text-2xl text-amber-100 min-w-[2ch] text-center tabular-nums">{missing}</span>
+              <button type="button" onClick={() => setMissing(missing + 1)}
+                className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-100 text-xl font-bold hover:bg-amber-500/25 active:scale-90 transition flex items-center justify-center">+</button>
+            </div>
+            <span className="text-[11px] text-amber-200/70">מתוך {requiredCount}</span>
+          </div>
+        );
+      })()}
+    </div>
+  );
+};
+
+/* =========================================================
+   7. KITCHEN DIAGRAM  (isometric-feeling layout)
+   ========================================================= */
+
+const Drawer = ({ icon, title, subtitle, accent = 'copper', defaultOpen = false, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const tone = ROOM_ACCENT[accent];
+  return (
+    <div className={`rounded-2xl glass border ${tone.ring} overflow-hidden`}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full p-3 flex items-center gap-3 text-right hover:bg-white/[0.03] transition">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${tone.bg}`}>
+          <span>{icon}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-ice-50">{title}</div>
+          {subtitle && <div className="text-[11px] text-ice-100/50">{subtitle}</div>}
+        </div>
+        <IconChevron size={18} className={`text-ice-100/50 transition-transform ${open ? 'rotate-180' : ''}`}/>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 anim-drawer">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ---------- Isometric Kitchen Scene ---------- */
+
+const IsoKitchenScene = ({ inspection, onTap }) => {
+  const T  = 22;          // tile size px
+  const OX = 280;         // origin x
+  const OY = 70;          // origin y
+  const px = (x, y) => OX + (x - y) * 0.866 * T;
+  const py = (x, y, z = 0) => OY + (x + y) * 0.5 * T - z * T;
+  const pt = (x, y, z = 0) => `${px(x, y).toFixed(1)},${py(x, y, z).toFixed(1)}`;
+
+  const polyTop   = (x, y, w, d, z)       => `${pt(x,y,z)} ${pt(x+w,y,z)} ${pt(x+w,y+d,z)} ${pt(x,y+d,z)}`;
+  const polyFront = (x, y, w, d, z0, z1)  => `${pt(x,y+d,z1)} ${pt(x+w,y+d,z1)} ${pt(x+w,y+d,z0)} ${pt(x,y+d,z0)}`;
+  const polyRight = (x, y, w, d, z0, z1)  => `${pt(x+w,y,z1)} ${pt(x+w,y+d,z1)} ${pt(x+w,y+d,z0)} ${pt(x+w,y,z0)}`;
+
+  const STATUS_GLOW = { ok: '#34d399', partial: '#fbbf24', missing: '#fb7185', pending: null };
+  const get = (key) => inspection.kitchen[key] || blankStatus();
+
+  const App = ({ keyName, x, y, w, d, h, baseZ = 0, faceColor, topColor, sideColor, accent, emoji, badge }) => {
+    const v = get(keyName);
+    const glow = STATUS_GLOW[v.status] || null;
+    const z0 = baseZ;
+    const z1 = baseZ + h;
+    const cx = px(x + w/2, y + d/2);
+    const cyTop = py(x + w/2, y + d/2, z1);
+    return (
+      <g onClick={() => onTap(keyName)} style={{ cursor: 'pointer' }} className="iso-app">
+        {glow && (
+          <ellipse cx={cx} cy={py(x+w/2, y+d/2, z0)} rx={Math.max(w, d)*T*0.55} ry={Math.max(w, d)*T*0.27}
+            fill={glow} opacity="0.55" style={{ filter: 'blur(8px)' }} />
+        )}
+        <polygon points={polyRight(x, y, w, d, z0, z1)} fill={sideColor || faceColor} stroke="rgba(0,0,0,0.45)" strokeWidth="0.7" />
+        <polygon points={polyFront(x, y, w, d, z0, z1)} fill={faceColor}              stroke="rgba(0,0,0,0.45)" strokeWidth="0.7" />
+        <polygon points={polyTop(x, y, w, d, z1)}       fill={topColor  || faceColor} stroke="rgba(0,0,0,0.35)" strokeWidth="0.7" />
+        {accent}
+        {emoji && (
+          <text x={cx} y={cyTop + 4} textAnchor="middle" fontSize="13"
+            style={{ userSelect: 'none', pointerEvents: 'none' }}>{emoji}</text>
+        )}
+        {badge != null && (
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={cx - 9} y={cyTop - 18} width="18" height="11" rx="3"
+              fill="rgba(10,22,40,0.85)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+            <text x={cx} y={cyTop - 9.5} textAnchor="middle" fontSize="8" fill="#e6eef7" fontWeight="700">{badge}</text>
+          </g>
+        )}
+        <circle cx={cx + 14} cy={cyTop - 14} r="4"
+          fill={glow || 'rgba(255,255,255,0.15)'}
+          stroke="rgba(10,22,40,0.9)" strokeWidth="1.4"
+          style={{ pointerEvents: 'none', filter: glow ? `drop-shadow(0 0 5px ${glow})` : 'none' }}/>
+      </g>
+    );
+  };
+
+  // Room dims
+  const RW = 12, RD = 8, WH = 4.6;
+
+  return (
+    <svg viewBox="0 -40 560 360" className="w-full block" preserveAspectRatio="xMidYMid meet"
+      style={{ filter: 'drop-shadow(0 14px 30px rgba(0,0,0,0.55))' }}>
+      <defs>
+        <linearGradient id="kFloor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#2a3854"/>
+          <stop offset="100%" stopColor="#16203a"/>
+        </linearGradient>
+        <linearGradient id="kWallA" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#243152"/>
+          <stop offset="100%" stopColor="#11192c"/>
+        </linearGradient>
+        <linearGradient id="kWallB" x1="1" y1="0" x2="0" y2="0">
+          <stop offset="0%"  stopColor="#0e1525"/>
+          <stop offset="100%" stopColor="#1c2840"/>
+        </linearGradient>
+        <linearGradient id="kCounterTop" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stopColor="#a96827"/>
+          <stop offset="50%" stopColor="#c87f3e"/>
+          <stop offset="100%" stopColor="#7d4d20"/>
+        </linearGradient>
+        <linearGradient id="kCounterFront" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#5a3818"/>
+          <stop offset="100%" stopColor="#3a2510"/>
+        </linearGradient>
+        <linearGradient id="kSteel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#dde3ec"/>
+          <stop offset="100%" stopColor="#9aa3b3"/>
+        </linearGradient>
+        <linearGradient id="kSteelF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#aab3c0"/>
+          <stop offset="100%" stopColor="#5e6878"/>
+        </linearGradient>
+        <linearGradient id="kBlackT" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#3a3f4a"/>
+          <stop offset="100%" stopColor="#1d2129"/>
+        </linearGradient>
+        <linearGradient id="kBlackF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#23272f"/>
+          <stop offset="100%" stopColor="#0f1117"/>
+        </linearGradient>
+        <linearGradient id="kCabF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#7d4d20"/>
+          <stop offset="100%" stopColor="#5a3818"/>
+        </linearGradient>
+      </defs>
+
+      {/* Floor */}
+      <polygon points={`${pt(0,0)} ${pt(RW,0)} ${pt(RW,RD)} ${pt(0,RD)}`} fill="url(#kFloor)" />
+      {/* Floor grid */}
+      {Array.from({length: RW+1}).map((_, i) => (
+        <line key={`fx${i}`} x1={px(i,0)} y1={py(i,0)} x2={px(i,RD)} y2={py(i,RD)} stroke="rgba(255,255,255,0.05)" strokeWidth="0.4" />
+      ))}
+      {Array.from({length: RD+1}).map((_, i) => (
+        <line key={`fy${i}`} x1={px(0,i)} y1={py(0,i)} x2={px(RW,i)} y2={py(RW,i)} stroke="rgba(255,255,255,0.05)" strokeWidth="0.4" />
+      ))}
+
+      {/* Back-right wall (y=0) */}
+      <polygon points={`${pt(0,0)} ${pt(RW,0)} ${pt(RW,0,WH)} ${pt(0,0,WH)}`} fill="url(#kWallA)" />
+      {/* Back-left wall (x=0) */}
+      <polygon points={`${pt(0,0)} ${pt(0,RD)} ${pt(0,RD,WH)} ${pt(0,0,WH)}`} fill="url(#kWallB)" />
+      {/* Wall trim */}
+      <line x1={px(0,0)} y1={py(0,0,WH)} x2={px(RW,0)} y2={py(RW,0,WH)} stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+      <line x1={px(0,0)} y1={py(0,0,WH)} x2={px(0,RD)} y2={py(0,RD,WH)} stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+      {/* Floor wall trim (moulding) */}
+      <line x1={px(0,0)} y1={py(0,0)} x2={px(RW,0)} y2={py(RW,0)} stroke="rgba(255,255,255,0.06)" strokeWidth="0.4"/>
+      <line x1={px(0,0)} y1={py(0,0)} x2={px(0,RD)} y2={py(0,RD)} stroke="rgba(255,255,255,0.06)" strokeWidth="0.4"/>
+
+      {/* L-Counter (back wall, from x=4.0 to x=12, depth 1.5) */}
+      <g>
+        <polygon points={polyRight(4.0, 0, 8.0, 1.5, 0, 2.2)} fill="url(#kCounterFront)" stroke="rgba(0,0,0,0.4)" strokeWidth="0.6"/>
+        <polygon points={polyFront(4.0, 0, 8.0, 1.5, 0, 2.2)} fill="url(#kCounterFront)" stroke="rgba(0,0,0,0.4)" strokeWidth="0.6"/>
+        <polygon points={polyTop(4.0, 0, 8.0, 1.5, 2.2)}      fill="url(#kCounterTop)"   stroke="rgba(0,0,0,0.3)" strokeWidth="0.6"/>
+      </g>
+      {/* Left-wall counter: x=0..1.5, y=1.5..7 */}
+      <g>
+        <polygon points={polyRight(0, 1.5, 1.5, 5.5, 0, 2.2)} fill="url(#kCounterFront)" stroke="rgba(0,0,0,0.4)" strokeWidth="0.6"/>
+        <polygon points={polyFront(0, 1.5, 1.5, 5.5, 0, 2.2)} fill="url(#kCounterFront)" stroke="rgba(0,0,0,0.4)" strokeWidth="0.6"/>
+        <polygon points={polyTop(0, 1.5, 1.5, 5.5, 2.2)}      fill="url(#kCounterTop)"   stroke="rgba(0,0,0,0.3)" strokeWidth="0.6"/>
+      </g>
+
+      {/* Counter drawer fronts (decorative, hint at cutlery drawer) */}
+      <g style={{ pointerEvents: 'none' }}>
+        {[5.0, 6.5, 8.0, 9.5].map((dx, i) => (
+          <Fragment key={i}>
+            <line x1={px(dx,1.5)} y1={py(dx,1.5,0.4)} x2={px(dx,1.5)} y2={py(dx,1.5,2.0)} stroke="rgba(0,0,0,0.5)" strokeWidth="0.4"/>
+            <rect x={px(dx-0.45, 1.5) + (dx-0.225-dx)*0 - 4} y={py(dx-0.225, 1.5, 1.0) - 1} width="8" height="2.5" rx="1" fill="rgba(0,0,0,0.45)" />
+          </Fragment>
+        ))}
+      </g>
+
+      {/* Upper cabinet on back wall (z=3.4..4.4, x=4..11, depth=0.7) */}
+      <g style={{ pointerEvents: 'none' }}>
+        <polygon points={polyRight(4, 0, 7, 0.7, 3.4, 4.3)} fill="#3a2510" stroke="rgba(0,0,0,0.4)" strokeWidth="0.5"/>
+        <polygon points={polyFront(4, 0, 7, 0.7, 3.4, 4.3)} fill="url(#kCabF)" stroke="rgba(0,0,0,0.4)" strokeWidth="0.5"/>
+        <polygon points={polyTop(4, 0, 7, 0.7, 4.3)}       fill="#5a3818" stroke="rgba(0,0,0,0.3)" strokeWidth="0.5"/>
+        {/* Cabinet door divisions */}
+        {[5.5, 7, 8.5, 10].map(dx => (
+          <line key={dx} x1={px(dx, 0.7)} y1={py(dx, 0.7, 3.4)} x2={px(dx, 0.7)} y2={py(dx, 0.7, 4.3)} stroke="rgba(0,0,0,0.5)" strokeWidth="0.4"/>
+        ))}
+        {/* Cabinet handles */}
+        {[5.0, 6.5, 8.0, 9.5, 11].map(dx => (
+          <circle key={`h${dx}`} cx={px(dx, 0.7)} cy={py(dx, 0.7, 3.7)} r="0.8" fill="rgba(0,0,0,0.55)"/>
+        ))}
+      </g>
+
+      {/* === APPLIANCES === */}
+
+      {/* Fridge — tall, leftmost on back wall */}
+      <App keyName="fridge" x={0.5} y={0} w={1.8} d={1.5} h={4} baseZ={0}
+        faceColor="url(#kSteelF)" topColor="url(#kSteel)" sideColor="#5e6878"
+        emoji="🧊"
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            {/* Vertical door split */}
+            <line x1={px(1.4, 1.5)} y1={py(1.4, 1.5, 0)} x2={px(1.4, 1.5)} y2={py(1.4, 1.5, 4)} stroke="rgba(0,0,0,0.4)" strokeWidth="0.5"/>
+            {/* Top freezer line */}
+            <line x1={px(0.5, 1.5)} y1={py(0.5, 1.5, 2.7)} x2={px(2.3, 1.5)} y2={py(2.3, 1.5, 2.7)} stroke="rgba(0,0,0,0.4)" strokeWidth="0.5"/>
+            {/* Handles */}
+            <rect x={px(1.0, 1.5) - 1} y={py(1.0, 1.5, 1.5)} width="2" height="14" fill="rgba(0,0,0,0.55)" rx="0.6"/>
+            <rect x={px(1.8, 1.5) - 1} y={py(1.8, 1.5, 3.0)} width="2" height="10" fill="rgba(0,0,0,0.55)" rx="0.6"/>
+          </g>
+        }
+      />
+
+      {/* Oven (built-in counter height) */}
+      <App keyName="oven" x={2.5} y={0} w={1.4} d={1.5} h={2.2} baseZ={0}
+        faceColor="url(#kBlackF)" topColor="url(#kBlackT)" sideColor="#15171c"
+        emoji="🔥"
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            {/* Oven window */}
+            <rect x={px(2.6, 1.5)} y={py(2.6, 1.5, 1.6)} width="38" height="14" rx="2" fill="#0a0c12" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+            {/* Oven knobs */}
+            <circle cx={px(2.7, 1.5)} cy={py(2.7, 1.5, 0.5)} r="1.3" fill="rgba(255,255,255,0.4)"/>
+            <circle cx={px(3.2, 1.5)} cy={py(3.2, 1.5, 0.5)} r="1.3" fill="rgba(255,255,255,0.4)"/>
+            <circle cx={px(3.7, 1.5)} cy={py(3.7, 1.5, 0.5)} r="1.3" fill="rgba(255,255,255,0.4)"/>
+          </g>
+        }
+      />
+
+      {/* Stove cooktop — sits on top of oven counter level */}
+      <App keyName="stove" x={2.5} y={0} w={1.4} d={1.5} h={0.15} baseZ={2.2}
+        faceColor="#1a1d24" topColor="#0f1117" sideColor="#15171c"
+        emoji=""
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            {[[2.85,0.5],[3.55,0.5],[2.85,1.05],[3.55,1.05]].map(([bx,by], i) => (
+              <g key={i}>
+                <ellipse cx={px(bx,by)} cy={py(bx,by,2.4)} rx="6" ry="3.4" fill="#1a1d24" stroke="rgba(200,127,62,0.4)" strokeWidth="0.5"/>
+                <ellipse cx={px(bx,by)} cy={py(bx,by,2.4)} rx="3" ry="1.7" fill="rgba(200,127,62,0.2)" />
+              </g>
+            ))}
+          </g>
+        }
+      />
+
+      {/* Dishwasher */}
+      <App keyName="dishwasher" x={4.2} y={0} w={1.5} d={1.5} h={2.2} baseZ={0}
+        faceColor="url(#kSteelF)" topColor="url(#kSteel)" sideColor="#5e6878"
+        emoji="💧"
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={px(4.4, 1.5)} y={py(4.4, 1.5, 1.9)} width="44" height="2" rx="0.5" fill="rgba(0,0,0,0.4)"/>
+            <rect x={px(4.4, 1.5)} y={py(4.4, 1.5, 0.6)} width="6" height="2" rx="0.5" fill="rgba(0,0,0,0.5)"/>
+          </g>
+        }
+      />
+
+      {/* Sink (built into counter top — small recessed box) */}
+      <App keyName="sink" x={5.9} y={0.15} w={1.5} d={1.2} h={0.05} baseZ={2.15}
+        faceColor="#13192a" topColor="#0c1220" sideColor="#1c2440"
+        emoji="🚰"
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            {/* Faucet */}
+            <line x1={px(6.65, 0.3)} y1={py(6.65, 0.3, 2.2)} x2={px(6.65, 0.3)} y2={py(6.65, 0.3, 3.0)} stroke="#dde3ec" strokeWidth="2"/>
+            <line x1={px(6.65, 0.3)} y1={py(6.65, 0.3, 3.0)} x2={px(6.65, 0.55)} y2={py(6.65, 0.55, 3.0)} stroke="#dde3ec" strokeWidth="2"/>
+          </g>
+        }
+      />
+
+      {/* Microwave (mounted high) */}
+      <App keyName="microwave" x={8} y={0.15} w={1.4} d={1.0} h={0.95} baseZ={2.4}
+        faceColor="url(#kBlackF)" topColor="url(#kBlackT)" sideColor="#15171c"
+        emoji="📦"
+        accent={
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={px(8.1, 1.15)} y={py(8.1, 1.15, 3.2)} width="22" height="10" rx="1" fill="#0a0c12" stroke="rgba(255,255,255,0.15)" strokeWidth="0.4"/>
+            <rect x={px(9.05, 1.15)} y={py(9.05, 1.15, 3.2)} width="6" height="10" rx="1" fill="#1a1d24" stroke="rgba(255,255,255,0.1)" strokeWidth="0.4"/>
+          </g>
+        }
+      />
+
+      {/* Counter-top items right of microwave */}
+      <App keyName="kettle" x={9.7} y={0.5} w={0.5} d={0.5} h={0.7} baseZ={2.2}
+        faceColor="#3a2510" topColor="#1d130a" sideColor="#1d130a" emoji="🫖"/>
+
+      <App keyName="coffeeMachine" x={10.3} y={0.4} w={0.7} d={0.7} h={1.0} baseZ={2.2}
+        faceColor="url(#kSteelF)" topColor="url(#kSteel)" sideColor="#5e6878" emoji="☕"/>
+
+      <App keyName="toaster" x={11.2} y={0.5} w={0.6} d={0.5} h={0.5} baseZ={2.2}
+        faceColor="url(#kSteelF)" topColor="url(#kSteel)" sideColor="#5e6878" emoji="🍞"/>
+
+      {/* Pots & Pans on left counter */}
+      <App keyName="pots" x={0.3} y={2.5} w={0.7} d={0.7} h={0.5} baseZ={2.2}
+        faceColor="#2a2e36" topColor="#1d2129" sideColor="#15171c" emoji="🍲"/>
+
+      <App keyName="pans" x={0.3} y={3.7} w={0.8} d={0.5} h={0.2} baseZ={2.2}
+        faceColor="#2a2e36" topColor="#1d2129" sideColor="#15171c" emoji="🍳"/>
+
+      {/* Bottom-right corner: Drawer hint */}
+      <text x={px(8, 1.5) + 12} y={py(8, 1.5, 0.6)} fontSize="6" fill="rgba(230,238,247,0.4)"
+        style={{ pointerEvents: 'none' }}>↓ מגירת סכו"ם</text>
+    </svg>
+  );
+};
+
+const KitchenDiagram = ({ inspection, capacity, onChange }) => {
+  const update = (key, value) => {
+    onChange({ ...inspection, kitchen: { ...inspection.kitchen, [key]: value }, updatedAt: Date.now() });
+  };
+  const tap = (key) => {
+    const v = inspection.kitchen[key] || blankStatus();
+    update(key, { ...v, status: cycleStatus(v.status || 'pending') });
+  };
+  const getReq = (item) => getItemRequired(item, capacity);
+
+  return (
+    <div className="space-y-3 stagger">
+      {/* 3D Kitchen scene */}
+      <div className="rounded-3xl glass-strong border border-copper-500/30 overflow-hidden relative">
+        <div className="absolute inset-0 opacity-30" style={{
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(200,127,62,0.4), transparent 65%)'
+        }}/>
+        <div className="relative p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-copper-300/70 display">Kitchen · 3D</div>
+              <div className="display text-2xl text-ice-50 leading-tight">המטבח שלך</div>
+              <div className="text-[11px] text-ice-100/50 mt-0.5">לחץ על מכשיר → תקין → חלקי → חסר</div>
+            </div>
+            <div className="text-right">
+              <div className="display text-3xl text-copper-300 tabular-nums">{capacity * 2}</div>
+              <div className="text-[10px] text-ice-100/50 -mt-1">מכל סכו"ם</div>
+            </div>
+          </div>
+
+          <IsoKitchenScene inspection={inspection} onTap={tap} />
+
+          <div className="mt-2 flex items-center justify-center gap-3 text-[10px] flex-wrap">
+            <span className="flex items-center gap-1 text-emerald-300"><span className="w-2 h-2 rounded-full bg-emerald-400"/>תקין</span>
+            <span className="flex items-center gap-1 text-amber-300"><span className="w-2 h-2 rounded-full bg-amber-400"/>חלקי</span>
+            <span className="flex items-center gap-1 text-rose-300"><span className="w-2 h-2 rounded-full bg-rose-400"/>חסר</span>
+            <span className="flex items-center gap-1 text-ice-100/40"><span className="w-2 h-2 rounded-full bg-white/30"/>לא נבדק</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cutlery drawer */}
+      <Drawer icon="🍴" title='מגירת סכו"ם' subtitle={`${capacity*2} יח׳ מכל פריט (2 לאורח)`} accent="copper" defaultOpen={true}>
+        <div className="space-y-2 mt-2">
+          {KITCHEN_MULTIPLIERS.slice(0, 4).map(item => {
+            const v = inspection.kitchen[item.key] || blankStatus();
+            const { required, isCountable } = getReq(item);
+            return (
+              <StatusItem key={item.key} item={item} requiredCount={required} isMultiplier={isCountable}
+                value={v} onChange={(nv) => update(item.key, nv)} />
+            );
+          })}
+        </div>
+      </Drawer>
+
+      {/* Cabinet */}
+      <Drawer icon="🗄️" title="ארון כלים" subtitle="צלחות, קערות, כוסות" accent="copper">
+        <div className="space-y-2 mt-2">
+          {KITCHEN_MULTIPLIERS.slice(4).map(item => {
+            const v = inspection.kitchen[item.key] || blankStatus();
+            const { required, isCountable } = getReq(item);
+            return (
+              <StatusItem key={item.key} item={item} requiredCount={required} isMultiplier={isCountable}
+                value={v} onChange={(nv) => update(item.key, nv)} />
+            );
+          })}
+        </div>
+      </Drawer>
+    </div>
+  );
+};
+
+/* =========================================================
+   8. GENERIC ROOM DIAGRAM (dining / bathroom / general)
+   ========================================================= */
+
+const RoomDiagram = ({ title, subtitle, glyph, items, inspectionRoom, capacity, accent, onChange, group }) => {
+  const tone = ROOM_ACCENT[accent];
+  const update = (key, value) => onChange({ ...inspectionRoom, [key]: value });
+  return (
+    <div className="space-y-3">
+      <div className={`rounded-2xl glass-strong border ${tone.ring} overflow-hidden relative`}>
+        <div className="absolute inset-0 opacity-30 counter-grain"/>
+        <div className="relative p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className={`text-[11px] uppercase tracking-[0.18em] ${tone.text}/80 display`}>{title.split(' ')[0]}</div>
+              <div className="display text-2xl text-ice-50 leading-tight">{title}</div>
+              {subtitle && <div className="text-xs text-ice-100/50 mt-0.5">{subtitle}</div>}
+            </div>
+            <div className="text-4xl">{glyph}</div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 stagger">
+            {items.map(item => {
+              const v = inspectionRoom[item.key] || blankStatus();
+              const visual = STATUS_VISUAL[v.status || 'pending'];
+              const { required, isCountable } = getItemRequired(item, capacity);
+              return (
+                <button key={item.key} type="button"
+                  onClick={() => update(item.key, { ...v, status: cycleStatus(v.status || 'pending') })}
+                  className={`group relative aspect-square rounded-xl border ${visual.ring} ${visual.bg} flex flex-col items-center justify-center p-1 transition active:scale-95 hover:scale-[1.03] ${v.status === 'missing' ? 'anim-warn' : ''}`}>
+                  <span className="text-2xl">{item.emoji}</span>
+                  <span className="text-[10px] text-ice-100/70 mt-0.5 text-center leading-tight">{item.label}{isCountable ? ` ×${required}` : ''}</span>
+                  <span className={`absolute top-1 left-1 w-1.5 h-1.5 rounded-full ${visual.dot}`}/>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <Drawer icon="📋" title="פירוט והערות" subtitle="הוסף הערה / כמות נוכחית לפריטים שאינם תקינים" accent={accent} defaultOpen={true}>
+        <div className="space-y-2 mt-2">
+          {items.map(item => {
+            const v = inspectionRoom[item.key] || blankStatus();
+            const { required, isCountable } = getItemRequired(item, capacity);
+            return (
+              <StatusItem key={item.key} item={item} requiredCount={required} isMultiplier={isCountable}
+                value={v} onChange={(nv) => update(item.key, nv)} />
+            );
+          })}
+        </div>
+      </Drawer>
+    </div>
+  );
+};
+
+/* =========================================================
+   9. MAINTENANCE PANEL
+   ========================================================= */
+
+const normalizePhotos = (photos) => (photos || [])
+  .map(p => typeof p === 'string' ? { src: p, note: '' } : (p && typeof p === 'object' ? { src: p.src || '', note: p.note || '' } : null))
+  .filter(Boolean);
+
+const MaintenancePanel = ({ inspection, onChange }) => {
+  const fileInputRef = useRef(null);
+  const update = (m) => onChange({ ...inspection, maintenance: m, updatedAt: Date.now() });
+  const photos = normalizePhotos(inspection.maintenance.photos);
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    try {
+      const newPhotos = await Promise.all(files.map(async f => ({ src: await compressImage(f), note: '' })));
+      update({ ...inspection.maintenance, photos: [...photos, ...newPhotos] });
+    } catch (err) { console.error(err); alert('טעינת התמונה נכשלה.'); }
+    finally { e.target.value = ''; }
+  };
+
+  const removePhoto = (idx) => update({ ...inspection.maintenance, photos: photos.filter((_, i) => i !== idx) });
+  const setPhotoNote = (idx, note) => update({ ...inspection.maintenance, photos: photos.map((p, i) => i === idx ? { ...p, note } : p) });
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl glass-strong border border-rose-400/30 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-rose-500/15 flex items-center justify-center text-2xl">🔧</div>
+          <div>
+            <div className="display text-2xl text-ice-50 leading-tight">תחזוקה ושיפוצים</div>
+            <div className="text-xs text-ice-100/50">תיעוד נזקים, תיקונים נדרשים, צילומים</div>
+          </div>
+        </div>
+
+        <textarea
+          value={inspection.maintenance.renovations}
+          onChange={e => update({ ...inspection.maintenance, renovations: e.target.value })}
+          placeholder="פרט שיפוצים נדרשים, תיקונים, צביעה, פגיעות בקירות וכו'…"
+          rows={5}
+          className="w-full px-3 py-2 rounded-xl bg-night-900/60 border border-white/10 text-ice-100 placeholder-ice-100/30 focus:outline-none focus:ring-2 focus:ring-rose-400 text-sm" />
+
+        <div className="mt-3">
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" multiple
+            onChange={handleFiles} className="hidden" />
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-rose-400/40 text-rose-200 font-semibold hover:border-rose-400 hover:bg-rose-500/10 transition">
+            <IconCamera size={18}/> הוסף תמונות נזק / שיפוץ
+          </button>
+
+          {photos.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 mt-3 stagger">
+              {photos.map((photo, idx) => (
+                <div key={idx} className="rounded-xl overflow-hidden border border-white/10 bg-night-950/40">
+                  <div className="relative">
+                    <img src={photo.src} alt={`damage-${idx}`} className="w-full h-32 object-cover" />
+                    <button type="button" onClick={() => removePhoto(idx)}
+                      className="absolute top-1 left-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700"
+                      aria-label="מחק תמונה">
+                      <IconX size={12}/>
+                    </button>
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-night-950/80 text-[10px] text-ice-100/70 font-bold">#{idx+1}</div>
+                  </div>
+                  <input type="text" value={photo.note}
+                    onChange={e => setPhotoNote(idx, e.target.value)}
+                    placeholder="הערה לתמונה…"
+                    className="w-full px-2 py-2 text-xs bg-transparent text-ice-100 placeholder-ice-100/30 focus:outline-none border-t border-white/5 focus:bg-white/[0.03]" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   10. EXIT CHECKPOINT
+   ========================================================= */
+
+const ExitCheckpoint = ({ inspection, onChange }) => {
+  const update = (k, v) => onChange({ ...inspection, exit: { ...inspection.exit, [k]: v }, updatedAt: Date.now() });
+  const allChecked = EXIT_CHECKLIST.every(i => inspection.exit[i.key]);
+
+  const completeInspection = () => {
+    if (!allChecked) return;
+    onChange({ ...inspection, completed: true, completedAt: Date.now(), updatedAt: Date.now() });
+  };
+  const reopenInspection = () => onChange({ ...inspection, completed: false, completedAt: null, updatedAt: Date.now() });
+
+  return (
+    <div className="rounded-2xl glass-strong border border-amber-400/30 p-4 space-y-3">
+      <div className="flex items-center gap-3">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition ${allChecked ? 'bg-emerald-500/20 anim-ember' : 'bg-amber-500/15'}`}>
+          {allChecked ? '🔓' : '🔐'}
+        </div>
+        <div>
+          <div className="display text-2xl text-ice-50 leading-tight">פרוטוקול יציאה</div>
+          <div className="text-xs text-ice-100/50">חובה לאשר את כל 6 הסעיפים</div>
+        </div>
+      </div>
+
+      <div className="space-y-2 stagger">
+        {EXIT_CHECKLIST.map((item, idx) => {
+          const checked = inspection.exit[item.key];
+          return (
+            <button key={item.key} type="button" onClick={() => update(item.key, !checked)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-right transition active:scale-[0.99] ${
+                checked ? 'bg-emerald-500/15 border-emerald-400/60 text-emerald-100' : 'bg-night-900/40 border-white/10 text-ice-100 hover:border-white/20'
+              }`}>
+              <span className={`shrink-0 w-7 h-7 rounded-md border-2 flex items-center justify-center transition ${checked ? 'bg-emerald-500 border-emerald-500' : 'bg-night-900 border-white/20'}`}>
+                {checked && <IconCheck size={16}/>}
+              </span>
+              <span className="font-semibold flex-1">{idx + 1}. {item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!inspection.completed ? (
+        <button type="button" disabled={!allChecked} onClick={completeInspection}
+          className={`w-full py-4 rounded-xl font-extrabold text-base transition flex items-center justify-center gap-2 ${
+            allChecked
+              ? 'bg-gradient-to-l from-emerald-500 to-emerald-400 text-white shadow-[0_8px_30px_-10px_rgba(52,211,153,0.7)] active:scale-[0.99]'
+              : 'bg-white/[0.05] text-ice-100/40 cursor-not-allowed border border-white/10'
+          }`}>
+          {allChecked ? <IconCheck size={20}/> : <IconLock size={20}/>}
+          {allChecked ? 'סיים בדיקה ונעל' : 'נעול – יש לאשר את כל הסעיפים'}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 font-bold">
+            <IconCheck size={18}/> הבדיקה הושלמה {inspection.completedAt ? `– ${new Date(inspection.completedAt).toLocaleString('he-IL')}` : ''}
+          </div>
+          <button type="button" onClick={reopenInspection}
+            className="w-full py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 text-ice-100 font-semibold flex items-center justify-center gap-2">
+            <IconRefresh size={16}/> פתח מחדש לעריכה
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* =========================================================
+   11. APARTMENT WORKSPACE  (rooms grid for one property)
+   ========================================================= */
+
+const ApartmentWorkspace = ({ property, inspection, onChange, onOpenRoom }) => {
+  const overall = inspectionProgress(inspection);
+  const issues  = inspectionHasIssues(inspection);
+  const completed = inspection?.completed;
+  const overallColor = completed ? '#34d399' : issues ? '#fbbf24' : '#5a8edb';
+
+  return (
+    <div className="px-4 pb-10 space-y-4 anim-fade-in">
+      {/* Hero card */}
+      <div className="rounded-3xl glass-strong border border-white/10 overflow-hidden relative">
+        <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-copper-500/10 blur-3xl"/>
+        <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-ice-700/20 blur-3xl"/>
+        <div className="relative p-5 flex items-center gap-4">
+          <ProgressRing pct={overall} size={92} stroke={8} color={overallColor} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-copper-300/70 display">Apartment</div>
+            <h1 className="display text-3xl text-ice-50 leading-tight truncate">{property.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10">
+                <IconUsers size={12}/> תפוסה {property.capacity}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10">
+                <IconBed size={12}/> {property.doubleBeds} זוגיות
+              </span>
+              {completed && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-400/40">
+                  <IconCheck size={12}/> הושלמה
+                </span>
+              )}
+              {!completed && issues && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/40">
+                  <IconAlert size={12}/> ליקויים
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rooms grid */}
+      <div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-ice-100/50 display mb-2 px-1">Rooms</div>
+        <div className="grid grid-cols-2 gap-3 stagger">
+          {ROOMS.map(room => {
+            const tone = ROOM_ACCENT[room.accent];
+            const stat = roomCategoryProgress(inspection, room.key);
+            return (
+              <button key={room.key} type="button"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty('--mx', ((e.clientX - rect.left)/rect.width*100)+'%');
+                  e.currentTarget.style.setProperty('--my', ((e.clientY - rect.top)/rect.height*100)+'%');
+                  onOpenRoom(room.key);
+                }}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty('--mx', ((e.clientX - rect.left)/rect.width*100)+'%');
+                  e.currentTarget.style.setProperty('--my', ((e.clientY - rect.top)/rect.height*100)+'%');
+                }}
+                className={`room-tile relative rounded-2xl glass border ${tone.ring} p-4 text-right overflow-hidden`}
+                style={{ boxShadow: `0 14px 30px -18px ${tone.glow}` }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="text-3xl">{room.glyph}</div>
+                  <ProgressRing pct={stat.pct} size={42} stroke={4} color={tone.glow.replace('0.45','1')} label={`${stat.pct}%`} />
+                </div>
+                <div className="display text-xl text-ice-50 leading-tight">{room.label}</div>
+                <div className="text-[11px] text-ice-100/50 mt-0.5">{room.subtitle}</div>
+                <div className="mt-3 flex items-center gap-2 text-[10px]">
+                  <span className={`px-2 py-0.5 rounded-full bg-white/[0.05] text-ice-100/70 border border-white/10`}>{stat.done}/{stat.total}</span>
+                  {stat.issues > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/30 font-semibold">
+                      {stat.issues} ליקויים
+                    </span>
+                  )}
+                </div>
+                <div className="absolute bottom-2 left-3 opacity-0 group-hover:opacity-100 transition">
+                  <IconChevRight size={14} className={tone.text}/>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   12. SINGLE ROOM SCREEN  (chosen by user)
+   ========================================================= */
+
+const RoomScreen = ({ property, inspection, roomKey, onChange }) => {
+  const cap = property.capacity;
+  if (roomKey === 'kitchen') {
+    return <KitchenDiagram inspection={inspection} capacity={cap} onChange={onChange} />;
+  }
+  if (roomKey === 'dining') {
+    return <RoomDiagram title="פינת אוכל וסלון" subtitle="ישיבה, שולחן, TV, תאורה" glyph="🛋️"
+      items={DINING_ITEMS} inspectionRoom={inspection.dining} capacity={cap} accent="sky" group="dining"
+      onChange={(d) => onChange({ ...inspection, dining: d, updatedAt: Date.now() })} />;
+  }
+  if (roomKey === 'bathroom') {
+    return <RoomDiagram title="חדר רחצה" subtitle={`מקלחת, אסלה, ${cap} מגבות`} glyph="🚿"
+      items={BATHROOM_ITEMS} inspectionRoom={inspection.bathroom} capacity={cap} accent="purple" group="bathroom"
+      onChange={(d) => onChange({ ...inspection, bathroom: d, updatedAt: Date.now() })} />;
+  }
+  if (roomKey === 'general') {
+    return <RoomDiagram title="חדרי שינה" subtitle={`${cap} מזרנים, ${cap} כריות, ${cap} שמיכות, חימום`} glyph="🛏️"
+      items={GENERAL_ITEMS} inspectionRoom={inspection.general} capacity={cap} accent="emerald" group="general"
+      onChange={(d) => onChange({ ...inspection, general: d, updatedAt: Date.now() })} />;
+  }
+  if (roomKey === 'maintenance') {
+    return <MaintenancePanel inspection={inspection} onChange={onChange} />;
+  }
+  if (roomKey === 'exit') {
+    return <ExitCheckpoint inspection={inspection} onChange={onChange} />;
+  }
+  return null;
+};
+
+/* =========================================================
+   13. APARTMENT GRID  (welcome / browse)
+   ========================================================= */
+
+const VantaHero = () => {
+  const ref = useRef(null);
+  const effectRef = useRef(null);
+  useEffect(() => {
+    if (!window.VANTA || !ref.current) return;
+    effectRef.current = window.VANTA.FOG({
+      el: ref.current, THREE: window.THREE,
+      mouseControls: false, touchControls: false, gyroControls: false,
+      highlightColor: 0xc87f3e, midtoneColor: 0x2a4f8a, lowlightColor: 0x0a1628, baseColor: 0x05080f,
+      blurFactor: 0.65, speed: 1.0, zoom: 0.85,
+    });
+    return () => { effectRef.current?.destroy(); };
+  }, []);
+  return <div ref={ref} className="absolute inset-0"/>;
+};
+
+const AptCard = ({ property, inspection, onClick, index }) => {
+  const progress = inspectionProgress(inspection);
+  const issues = inspectionHasIssues(inspection);
+  const completed = inspection?.completed;
+  const tone = completed ? 'emerald' : issues ? 'amber' : progress > 0 ? 'sky' : 'slate';
+  const ring = completed ? 'border-emerald-400/40' : issues ? 'border-amber-400/40' : progress > 0 ? 'border-sky-400/30' : 'border-white/10';
+  const ringColor = completed ? '#34d399' : issues ? '#fbbf24' : progress > 0 ? '#5a8edb' : '#94a3b8';
+
+  return (
+    <button type="button" onClick={onClick}
+      className={`group relative tilt rounded-2xl glass border ${ring} p-3 text-right overflow-hidden`}
+      style={{ animationDelay: `${Math.min(index*30, 600)}ms` }}>
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition" style={{ background: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 60%)' }}/>
+      <div className="relative flex items-center gap-3">
+        <ProgressRing pct={progress} size={48} stroke={4} color={ringColor} />
+        <div className="flex-1 min-w-0">
+          <div className="display text-base text-ice-50 truncate leading-tight">{property.name}</div>
+          <div className="text-[11px] text-ice-100/50 flex items-center gap-2 mt-0.5">
+            <span>תפוסה {property.capacity}</span>
+            {property.doubleBeds > 0 && <><span>·</span><span>{property.doubleBeds} זוגיות</span></>}
+          </div>
+        </div>
+      </div>
+      <div className="relative mt-2 flex items-center justify-between">
+        {completed ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 font-bold">
+            <IconCheck size={10}/> הושלמה
+          </span>
+        ) : issues ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-200 border border-amber-400/30 font-bold">
+            <IconAlert size={10}/> ליקויים
+          </span>
+        ) : progress > 0 ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-sky-400/15 text-sky-200 border border-sky-400/30 font-bold">
+            בטיפול
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-ice-100/50 border border-white/10 font-bold">
+            ממתינה
+          </span>
+        )}
+        <IconChevRight size={14} className="text-ice-100/40 group-hover:text-ice-50 transition"/>
+      </div>
+    </button>
+  );
+};
+
+const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return properties.filter(p => {
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      const ins = inspections[p.id];
+      if (filter === 'done' && !ins?.completed) return false;
+      if (filter === 'pending' && ins?.completed) return false;
+      if (filter === 'issues' && !inspectionHasIssues(ins)) return false;
+      return true;
+    });
+  }, [properties, inspections, search, filter]);
+
+  const stats = useMemo(() => {
+    let done = 0, issues = 0, inProg = 0;
+    properties.forEach(p => {
+      const ins = inspections[p.id];
+      if (ins?.completed) done += 1;
+      else if (inspectionHasIssues(ins)) issues += 1;
+      else if (ins && inspectionProgress(ins) > 0) inProg += 1;
+    });
+    return { total: properties.length, done, issues, inProg };
+  }, [properties, inspections]);
+
+  const handleSelect = (id) => {
+    if (!inspections[id]) setInspection(id, createBlankInspection());
+    onSelect(id);
+  };
+
+  return (
+    <div className="relative anim-fade-in">
+      {/* Hero */}
+      <div className="relative h-56 sm:h-64 overflow-hidden">
+        <VantaHero/>
+        <div className="absolute inset-0 bg-gradient-to-b from-night-950/30 via-night-950/10 to-night-950"/>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 anim-slide-up">
+          <div className="text-[10px] uppercase tracking-[0.4em] text-copper-300/80 display">Val Thorens · 3,230 m</div>
+          <h1 className="display text-4xl sm:text-5xl text-ice-50 mt-1">בדיקת דירות</h1>
+          <p className="text-xs text-ice-100/60 mt-1.5">{properties.length} דירות אלפיניות · ניהול מלא</p>
+        </div>
+      </div>
+
+      <div className="px-4 -mt-6 relative z-10">
+        {/* stats strip */}
+        <div className="grid grid-cols-4 gap-2 mb-4 stagger">
+          <div className="rounded-xl glass border border-white/10 p-2 text-center">
+            <div className="display text-2xl text-ice-50">{stats.total}</div>
+            <div className="text-[10px] text-ice-100/50 mt-0.5">סה"כ</div>
+          </div>
+          <div className="rounded-xl glass border border-emerald-400/30 p-2 text-center">
+            <div className="display text-2xl text-emerald-300">{stats.done}</div>
+            <div className="text-[10px] text-emerald-200/70 mt-0.5">הושלמו</div>
+          </div>
+          <div className="rounded-xl glass border border-sky-400/30 p-2 text-center">
+            <div className="display text-2xl text-sky-300">{stats.inProg}</div>
+            <div className="text-[10px] text-sky-200/70 mt-0.5">בטיפול</div>
+          </div>
+          <div className="rounded-xl glass border border-amber-400/30 p-2 text-center">
+            <div className="display text-2xl text-amber-300">{stats.issues}</div>
+            <div className="text-[10px] text-amber-200/70 mt-0.5">ליקויים</div>
+          </div>
+        </div>
+
+        {/* search */}
+        <div className="relative mb-3">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ice-100/40">
+            <IconSearch size={18}/>
+          </span>
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש דירה לפי שם…"
+            className="w-full pr-10 pl-3 py-3 rounded-xl glass border border-white/10 text-ice-50 placeholder-ice-100/40 focus:outline-none focus:ring-2 focus:ring-copper-500" />
+        </div>
+
+        {/* filters */}
+        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+          {[
+            { key: 'all',     label: 'הכל',      icon: <IconFilter size={12}/> },
+            { key: 'pending', label: 'ממתינות',   icon: null },
+            { key: 'issues',  label: 'ליקויים',   icon: <IconAlert size={12}/> },
+            { key: 'done',    label: 'הושלמו',    icon: <IconCheck size={12}/> },
+          ].map(f => (
+            <button key={f.key} type="button" onClick={() => setFilter(f.key)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition flex items-center gap-1 ${
+                filter === f.key
+                  ? 'bg-copper-500 text-white border-copper-500 shadow-[0_6px_20px_-8px_rgba(200,127,62,0.7)]'
+                  : 'bg-white/[0.04] text-ice-100/70 border-white/10 hover:bg-white/[0.08]'
+              }`}>
+              {f.icon}
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* grid */}
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50">
+            לא נמצאו דירות תואמות
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pb-6 stagger">
+            {filtered.map((p, i) => (
+              <AptCard key={p.id} property={p} inspection={inspections[p.id]} index={i}
+                onClick={() => handleSelect(p.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   14. SETUP VIEW  (preserved with re-skinned UI)
+   ========================================================= */
+
+const SetupView = ({ properties, setProperties, inspections, setInspections }) => {
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState({ name: '', capacity: 2, doubleBeds: 0 });
+  const [adding, setAdding] = useState(false);
+
+  const startEdit = (p) => { setEditingId(p.id); setDraft({ name: p.name, capacity: p.capacity, doubleBeds: p.doubleBeds }); setAdding(false); };
+  const saveEdit = () => {
+    setProperties(prev => prev.map(p => p.id === editingId
+      ? { ...p, name: draft.name.trim() || p.name, capacity: Number(draft.capacity) || 1, doubleBeds: Number(draft.doubleBeds) || 0 }
+      : p));
+    setEditingId(null);
+  };
+  const cancelEdit = () => { setEditingId(null); setAdding(false); };
+  const addProperty = () => {
+    const name = draft.name.trim();
+    if (!name) { alert('יש להזין שם דירה'); return; }
+    const id = 'custom-' + Date.now();
+    setProperties(prev => [...prev, { id, name, capacity: Number(draft.capacity) || 1, doubleBeds: Number(draft.doubleBeds) || 0 }]);
+    setDraft({ name: '', capacity: 2, doubleBeds: 0 }); setAdding(false);
+  };
+  const deleteProperty = (id) => {
+    if (!confirm('למחוק את הדירה? פעולה זו תמחק גם את הבדיקה השמורה שלה.')) return;
+    setProperties(prev => prev.filter(p => p.id !== id));
+    setInspections(prev => { const next = { ...prev }; delete next[id]; return next; });
+  };
+  const resetAll = () => {
+    if (!confirm('לשחזר את רשימת ברירת המחדל ולמחוק את כל הבדיקות? פעולה לא הפיכה.')) return;
+    setProperties(INITIAL_PROPERTIES); setInspections({});
+  };
+
+  return (
+    <div className="px-4 py-4 space-y-3 anim-fade-in">
+      <div className="rounded-2xl glass border border-white/10 p-4">
+        <div className="flex items-center gap-2 text-ice-100">
+          <IconSettings size={18}/>
+          <h2 className="display text-2xl text-ice-50 leading-tight">הגדרות דירות</h2>
+        </div>
+        <p className="text-xs text-ice-100/50 mt-1">הוסף, ערוך או הסר דירות. כל שינוי נשמר אוטומטית במכשיר.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => { setAdding(true); setEditingId(null); setDraft({ name: '', capacity: 2, doubleBeds: 0 }); }}
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-l from-copper-500 to-copper-400 text-white font-bold hover:brightness-110 shadow-[0_6px_20px_-8px_rgba(200,127,62,0.7)]">
+            <IconPlus size={16}/> הוסף דירה
+          </button>
+          <button type="button" onClick={resetAll}
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-400/30 font-bold hover:bg-rose-500/20">
+            <IconRefresh size={16}/> שחזר ברירת מחדל
+          </button>
+        </div>
+      </div>
+
+      {adding && (
+        <div className="rounded-2xl glass-strong border-2 border-copper-500/50 p-4 anim-slide-up">
+          <h3 className="font-bold text-ice-50 mb-3 display text-xl">דירה חדשה</h3>
+          <div className="space-y-2">
+            <input autoFocus type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+              placeholder="שם הדירה"
+              className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50 focus:outline-none focus:ring-2 focus:ring-copper-500" />
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-sm">
+                <span className="block text-ice-100/70 mb-1">תפוסה</span>
+                <input type="number" min="1" value={draft.capacity}
+                  onChange={e => setDraft({ ...draft, capacity: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50"/>
+              </label>
+              <label className="text-sm">
+                <span className="block text-ice-100/70 mb-1">מיטות זוגיות</span>
+                <input type="number" min="0" value={draft.doubleBeds}
+                  onChange={e => setDraft({ ...draft, doubleBeds: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50"/>
+              </label>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={addProperty}
+                className="flex-1 py-2 rounded-lg bg-emerald-500 text-white font-bold hover:bg-emerald-400">שמור</button>
+              <button type="button" onClick={cancelEdit}
+                className="flex-1 py-2 rounded-lg bg-white/[0.06] text-ice-100 border border-white/10 font-semibold hover:bg-white/[0.1]">בטל</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2 stagger">
+        {properties.map(p => {
+          const isEditing = editingId === p.id;
+          return (
+            <div key={p.id} className={`rounded-2xl glass border ${isEditing ? 'border-copper-500/60' : 'border-white/10'} p-3`}>
+              {!isEditing ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.05] text-ice-100 flex items-center justify-center shrink-0 border border-white/10">
+                    <IconHome size={18}/>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-ice-50 truncate display">{p.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-ice-100/50 mt-0.5">
+                      <span>תפוסה {p.capacity}</span>
+                      <span>•</span>
+                      <span>זוגיות {p.doubleBeds}</span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => startEdit(p)}
+                    className="p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.06]" aria-label="ערוך">
+                    <IconEdit size={18}/>
+                  </button>
+                  <button type="button" onClick={() => deleteProperty(p.id)}
+                    className="p-2 rounded-lg text-rose-400 hover:bg-rose-500/10" aria-label="מחק">
+                    <IconTrash size={18}/>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50 focus:outline-none focus:ring-2 focus:ring-copper-500" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-sm">
+                      <span className="block text-ice-100/70 mb-1">תפוסה</span>
+                      <input type="number" min="1" value={draft.capacity}
+                        onChange={e => setDraft({ ...draft, capacity: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50"/>
+                    </label>
+                    <label className="text-sm">
+                      <span className="block text-ice-100/70 mb-1">מיטות זוגיות</span>
+                      <input type="number" min="0" value={draft.doubleBeds}
+                        onChange={e => setDraft({ ...draft, doubleBeds: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-night-900/60 border border-white/15 text-ice-50"/>
+                    </label>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={saveEdit}
+                      className="flex-1 py-2 rounded-lg bg-emerald-500 text-white font-bold hover:bg-emerald-400">שמור</button>
+                    <button type="button" onClick={cancelEdit}
+                      className="flex-1 py-2 rounded-lg bg-white/[0.06] text-ice-100 border border-white/10 font-semibold hover:bg-white/[0.1]">בטל</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   15. SHOPPING VIEW  (re-skinned)
+   ========================================================= */
+
+const ShoppingView = ({ properties, inspections }) => {
+  const [groupBy, setGroupBy] = useState('item');
+
+  const aggregate = useMemo(() => computeAggregateShortages(properties, inspections), [properties, inspections]);
+  const byProperty = useMemo(() => properties
+    .map(p => ({ property: p, list: computePropertyShortages(p, inspections[p.id]) }))
+    .filter(x => x.list.length > 0), [properties, inspections]);
+
+  const totalQty   = aggregate.reduce((s, a) => s + a.totalQty, 0);
+  const totalLines = aggregate.length;
+
+  const printList = () => window.print();
+
+  const copyAsText = async () => {
+    const lines = ['רשימת קניות – Val Thorens', `נוצר: ${new Date().toLocaleString('he-IL')}`, ''];
+    if (groupBy === 'item') {
+      aggregate.forEach(row => {
+        if (row.totalQty > 0) lines.push(`• ${row.label} — ${row.totalQty} יח׳`);
+        else lines.push(`• ${row.label} — לבדוק`);
+        row.breakdown.forEach(b => {
+          const note = b.note ? ` [${b.note}]` : '';
+          lines.push(`    - ${b.propertyName}: ${b.qty || (b.status === 'partial' ? 'חלקי' : 'חסר')}${note}`);
+        });
+      });
+    } else {
+      byProperty.forEach(({ property, list }) => {
+        lines.push(`◆ ${property.name} (תפוסה ${property.capacity})`);
+        list.forEach(it => {
+          const note = it.note ? ` [${it.note}]` : '';
+          lines.push(`    • ${it.label}: ${it.qty > 0 ? it.qty : (it.status === 'partial' ? 'חלקי' : 'חסר')}${note}`);
+        });
+        lines.push('');
+      });
+    }
+    const text = lines.join('\n');
+    try { await navigator.clipboard.writeText(text); alert('הרשימה הועתקה ללוח.'); }
+    catch {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a'); a.href = url;
+      a.download = `shopping-list-${new Date().toISOString().slice(0,10)}.txt`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+  };
+
+  if (aggregate.length === 0) {
+    return (
+      <div className="px-4 py-10 text-center anim-fade-in">
+        <div className="rounded-3xl glass-strong border border-emerald-400/30 p-8">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center mx-auto mb-3 anim-ember">
+            <IconCheck size={36}/>
+          </div>
+          <h3 className="display text-2xl text-ice-50">אין כלום לקנות</h3>
+          <p className="text-sm text-ice-100/50 mt-2">כל הפריטים שנבדקו עד כה תקינים.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-4 space-y-3 anim-fade-in">
+      <div className="grid grid-cols-3 gap-2 stagger">
+        <div className="rounded-xl glass border border-white/10 p-3 text-center">
+          <div className="display text-2xl text-ice-50">{totalLines}</div>
+          <div className="text-[10px] text-ice-100/50 mt-0.5">פריטים</div>
+        </div>
+        <div className="rounded-xl glass border border-rose-400/30 p-3 text-center">
+          <div className="display text-2xl text-rose-300">{totalQty}</div>
+          <div className="text-[10px] text-rose-200/70 mt-0.5">סה"כ יח'</div>
+        </div>
+        <div className="rounded-xl glass border border-amber-400/30 p-3 text-center">
+          <div className="display text-2xl text-amber-300">{byProperty.length}</div>
+          <div className="text-[10px] text-amber-200/70 mt-0.5">דירות</div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex gap-1 p-1 glass rounded-xl border border-white/10">
+          <button type="button" onClick={() => setGroupBy('item')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupBy === 'item' ? 'bg-copper-500 text-white' : 'text-ice-100/60 hover:bg-white/[0.05]'}`}>לפי פריט</button>
+          <button type="button" onClick={() => setGroupBy('property')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupBy === 'property' ? 'bg-copper-500 text-white' : 'text-ice-100/60 hover:bg-white/[0.05]'}`}>לפי דירה</button>
+        </div>
+        <div className="flex gap-1">
+          <button type="button" onClick={copyAsText}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg glass border border-white/10 text-ice-100 text-sm font-bold hover:bg-white/[0.06]">
+            <IconCopy size={14}/> העתק
+          </button>
+          <button type="button" onClick={printList}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg glass border border-white/10 text-ice-100 text-sm font-bold hover:bg-white/[0.06]">
+            <IconPrint size={14}/> הדפס
+          </button>
+        </div>
+      </div>
+
+      {groupBy === 'item' ? (
+        <div className="space-y-2 stagger">
+          {aggregate.map(row => {
+            const meta = CATEGORY_META[row.category] || { label: row.category, accent: 'slate' };
+            const tone = ROOM_ACCENT[meta.accent === 'orange' ? 'copper' : meta.accent] || ROOM_ACCENT.copper;
+            return (
+              <div key={`${row.category}:${row.itemKey}`} className="rounded-2xl glass border border-white/10 overflow-hidden">
+                <div className="p-3 flex items-center gap-3">
+                  <div className={`shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${tone.bg} border ${tone.ring}`}>
+                    <span className="text-[9px] leading-none text-ice-100/70">לקנות</span>
+                    <span className={`display text-xl leading-tight ${tone.text}`}>{row.totalQty || '·'}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-ice-50 truncate">{row.label}</div>
+                    <div className="flex items-center gap-2 text-xs text-ice-100/50 mt-0.5">
+                      <span className={`px-1.5 py-0.5 rounded ${tone.bg} ${tone.text} border ${tone.ring}`}>{meta.label}</span>
+                      <span>{row.breakdown.length} דירות</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-white/5 bg-night-950/30 px-3 py-2 space-y-1">
+                  {row.breakdown.map((b, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-ice-100/80">
+                      <span className={`shrink-0 mt-1.5 w-2 h-2 rounded-full ${b.status === 'missing' ? 'bg-rose-400' : 'bg-amber-400'}`}/>
+                      <span className="font-semibold truncate">{b.propertyName}</span>
+                      <span className="shrink-0 text-ice-100/30">·</span>
+                      <span className={`shrink-0 font-bold ${b.qty > 0 ? 'text-rose-300' : 'text-amber-300'}`}>
+                        {b.qty > 0 ? `${b.qty} יח׳` : (b.status === 'partial' ? 'חלקי' : 'חסר')}
+                      </span>
+                      {b.note && <span className="text-ice-100/50 text-xs truncate">[{b.note}]</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2 stagger">
+          {byProperty.map(({ property, list }) => {
+            const total = list.reduce((s, x) => s + x.qty, 0);
+            return (
+              <div key={property.id} className="rounded-2xl glass border border-white/10 overflow-hidden">
+                <div className="p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30">
+                  <div className="w-10 h-10 rounded-xl bg-copper-500/15 border border-copper-500/30 text-copper-300 flex items-center justify-center shrink-0">
+                    <IconHome size={18}/>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="display font-bold text-ice-50 truncate">{property.name}</div>
+                    <div className="text-xs text-ice-100/50">תפוסה {property.capacity} · {list.length} פריטים</div>
+                  </div>
+                  <div className="shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold">
+                    {total} יח׳
+                  </div>
+                </div>
+                <div className="p-2 space-y-1">
+                  {list.map((it, i) => {
+                    const meta = CATEGORY_META[it.category] || { label: it.category, accent: 'slate' };
+                    const tone = ROOM_ACCENT[meta.accent === 'orange' ? 'copper' : meta.accent] || ROOM_ACCENT.copper;
+                    return (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]">
+                        <span className={`shrink-0 px-1.5 py-0.5 text-[10px] rounded ${tone.bg} ${tone.text} border ${tone.ring} font-semibold`}>{meta.label}</span>
+                        <span className="font-semibold text-ice-100 flex-1 truncate">{it.label}</span>
+                        <span className={`shrink-0 font-bold ${it.qty > 0 ? 'text-rose-300' : 'text-amber-300'}`}>
+                          {it.qty > 0 ? `${it.qty} יח׳` : (it.status === 'partial' ? 'חלקי' : 'חסר')}
+                        </span>
+                        {it.note && <span className="text-xs text-ice-100/50 truncate hidden sm:inline">[{it.note}]</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* =========================================================
+   16. CONNECT MODAL  (re-skinned)
+   ========================================================= */
+
+const ConnectModal = ({ onClose }) => {
+  const [qrUrl, setQrUrl] = useState(null);
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const url = window.location.href;
+  const isFile = window.location.protocol === 'file:';
+
+  useEffect(() => {
+    if (isFile) return;
+    if (!window.QRCode) { setError('ספריית QR לא נטענה.'); return; }
+    window.QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: 'M' })
+      .then(setQrUrl)
+      .catch(err => setError(err.message || 'שגיאה ביצירת QR'));
+  }, [url, isFile]);
+
+  const copyUrl = async () => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    catch { alert('העתקה נכשלה. הכתובת:\n' + url); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-night-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 anim-fade-in"
+         onClick={onClose}>
+      <div className="rounded-3xl glass-strong border border-white/15 w-full max-w-md max-h-[90vh] overflow-y-auto anim-slide-up"
+           onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <IconPhone size={20} className="text-copper-300"/>
+            <h2 className="display text-xl text-ice-50">חיבור מהטלפון</h2>
+          </div>
+          <button type="button" onClick={onClose}
+            className="p-1 rounded-lg hover:bg-white/[0.06] text-ice-100/70" aria-label="סגור">
+            <IconX size={20}/>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {isFile ? (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-amber-500/10 border border-amber-400/30 p-3 text-sm text-amber-200">
+                <div className="font-bold mb-1 flex items-center gap-1"><IconAlert size={16}/> האפליקציה רצה מקובץ מקומי</div>
+                <p>סריקה ישירה לא תעבוד כי הטלפון לא יכול לגשת ל־<code className="bg-amber-400/15 px-1 rounded">file://</code> שלך.</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 text-sm text-ice-100">
+                <p className="font-bold mb-2">3 דרכים לפתוח בטלפון:</p>
+                <ol className="list-decimal pr-5 space-y-2 text-ice-100/80">
+                  <li><b>שרת מקומי:</b> טרמינל בתיקיית הקובץ והרץ:
+                    <pre className="bg-night-950 text-ice-100 text-xs rounded-lg p-2 mt-1 overflow-x-auto" dir="ltr">python -m http.server 8000</pre>
+                    בטלפון: <code className="bg-white/10 px-1 rounded">http://&lt;IP&gt;:8000</code></li>
+                  <li><b>אחסון בענן:</b> העלה את <code className="bg-white/10 px-1 rounded">index.html</code> ל־OneDrive/Drive ופתח את הקישור בטלפון.</li>
+                  <li><b>ייצוא נתונים:</b> "ייצוא JSON" כאן → "ייבוא JSON" שם.</li>
+                </ol>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-ice-100/60 text-center">סרוק את הקוד עם מצלמת הטלפון.</p>
+              <div className="flex justify-center">
+                {error ? <div className="text-rose-300 text-sm">{error}</div> :
+                 qrUrl ? <img src={qrUrl} alt="QR" className="w-64 h-64 rounded-xl border border-white/10 shadow-2xl bg-white p-2" /> :
+                 <div className="w-64 h-64 flex items-center justify-center bg-white/[0.04] rounded-xl border border-white/10">
+                   <div className="w-8 h-8 border-4 border-white/20 border-t-copper-400 rounded-full animate-spin"/>
+                 </div>}
+              </div>
+              <div className="rounded-xl bg-white/[0.04] border border-white/10 p-2 flex items-center gap-2">
+                <code className="flex-1 text-xs text-ice-100/80 truncate" dir="ltr">{url}</code>
+                <button type="button" onClick={copyUrl}
+                  className="shrink-0 px-2 py-1 rounded-lg bg-copper-500 text-white text-xs font-bold hover:brightness-110 flex items-center gap-1">
+                  <IconCopy size={12}/> {copied ? 'הועתק!' : 'העתק'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   17. ROOT APP
+   ========================================================= */
+
+const App = () => {
+  const [mode, setMode] = useState('inspect'); // inspect | shopping | setup
+  const [properties, setProperties]   = useState(() => safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES));
+  const [inspections, setInspections] = useState(() => safeLoad(STORAGE_KEYS.inspections, {}));
+  const [showConnect, setShowConnect] = useState(false);
+
+  // Navigation: which apartment is open, and which room inside it.
+  const [selectedAptId, setSelectedAptId] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+
+  useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
+  useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); }, [inspections]);
+
+  const setInspection = useCallback((id, ins) => {
+    setInspections(prev => ({ ...prev, [id]: ins }));
+  }, []);
+
+  const exportJSON = () => {
+    const payload = { exportedAt: new Date().toISOString(), version: 2, properties, inspections };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,19).replace(/[T:]/g, '-');
+    a.href = url; a.download = `valthorens-inspections-${stamp}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importInputRef = useRef(null);
+  const importJSON = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.properties || !data.inspections) throw new Error('bad format');
+      if (!confirm('פעולה זו תחליף את כל הנתונים השמורים. להמשיך?')) return;
+      setProperties(data.properties); setInspections(data.inspections);
+      alert('הייבוא הושלם בהצלחה.');
+    } catch (err) { alert('הקובץ לא תקין.'); console.error(err); }
+    finally { e.target.value = ''; }
+  };
+
+  // Switching modes resets navigation
+  const switchMode = (m) => { setMode(m); setSelectedAptId(null); setSelectedRoom(null); };
+
+  const property = selectedAptId ? properties.find(p => p.id === selectedAptId) : null;
+  const inspection = selectedAptId ? (inspections[selectedAptId] || createBlankInspection()) : null;
+  const currentRoom = selectedRoom ? ROOMS.find(r => r.key === selectedRoom) : null;
+
+  const handleInspectionChange = (ins) => {
+    setInspection(selectedAptId, { ...ins, updatedAt: Date.now() });
+  };
+
+  // Breadcrumb / back behavior
+  const goBack = () => {
+    if (selectedRoom) setSelectedRoom(null);
+    else if (selectedAptId) setSelectedAptId(null);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col relative">
+      {/* Header */}
+      <header className="bg-night-950/80 backdrop-blur-xl text-ice-50 pt-safe sticky top-0 z-30 border-b border-white/5 no-print">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {(selectedAptId || selectedRoom) && mode === 'inspect' ? (
+                <button type="button" onClick={goBack}
+                  className="p-2 -mr-2 rounded-lg hover:bg-white/[0.05] text-ice-100 transition" aria-label="חזרה">
+                  <IconArrowLeft size={20}/>
+                </button>
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-copper-500 to-copper-600 flex items-center justify-center shadow-[0_4px_20px_-6px_rgba(200,127,62,0.7)] shrink-0">
+                  <IconMountain size={18} className="text-white"/>
+                </div>
+              )}
+              <div className="min-w-0">
+                {selectedAptId && property ? (
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-copper-300/70 uppercase tracking-[0.18em] display leading-none">
+                      {currentRoom ? property.name : 'Workspace'}
+                    </p>
+                    <h1 className="display text-base text-ice-50 leading-tight truncate">
+                      {currentRoom ? currentRoom.label : property.name}
+                    </h1>
+                  </div>
+                ) : (
+                  <div>
+                    <h1 className="display text-base leading-tight">בדיקת דירות</h1>
+                    <p className="text-[10px] text-ice-100/50 leading-tight">Val Thorens · {properties.length} דירות</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <input ref={importInputRef} type="file" accept="application/json" onChange={importJSON} className="hidden" />
+              <button type="button" onClick={() => setShowConnect(true)} className="p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]" title="התחבר לטלפון"><IconPhone size={18}/></button>
+              <button type="button" onClick={() => importInputRef.current?.click()} className="p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]" title="ייבוא JSON"><IconRefresh size={18}/></button>
+              <button type="button" onClick={exportJSON} className="p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]" title="ייצוא JSON"><IconDownload size={18}/></button>
+            </div>
+          </div>
+
+          {/* Mode toggle (hidden when inside an apartment) */}
+          {!selectedAptId && (
+            <div className="mt-3 grid grid-cols-3 gap-1 p-1 bg-white/[0.04] border border-white/5 rounded-xl">
+              {[
+                { key: 'inspect',  label: 'בדיקה',    icon: <IconClipboard size={14}/> },
+                { key: 'shopping', label: 'קניות',    icon: <IconCart size={14}/> },
+                { key: 'setup',    label: 'הגדרות',   icon: <IconSettings size={14}/> },
+              ].map(t => (
+                <button key={t.key} type="button" onClick={() => switchMode(t.key)}
+                  className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition ${
+                    mode === t.key ? 'bg-copper-500 text-white shadow-[0_4px_14px_-4px_rgba(200,127,62,0.7)]' : 'text-ice-100/60 hover:text-ice-50 hover:bg-white/[0.04]'
+                  }`}>
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Breadcrumb when inside apt */}
+          {selectedAptId && property && (
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-ice-100/50">
+              <button type="button" onClick={() => { setSelectedAptId(null); setSelectedRoom(null); }}
+                className="hover:text-ice-50 transition">דירות</button>
+              <IconChevRight size={10}/>
+              {currentRoom ? (
+                <>
+                  <button type="button" onClick={() => setSelectedRoom(null)}
+                    className="hover:text-ice-50 transition truncate max-w-[140px]">{property.name}</button>
+                  <IconChevRight size={10}/>
+                  <span className={ROOM_ACCENT[currentRoom.accent].text}>{currentRoom.label}</span>
+                </>
+              ) : (
+                <span className="text-ice-50/80">{property.name}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Body */}
+      <main className="flex-1 max-w-2xl mx-auto w-full pb-safe relative z-10">
+        {mode === 'inspect' && !selectedAptId && (
+          <ApartmentGrid properties={properties} inspections={inspections}
+            setInspection={setInspection} onSelect={setSelectedAptId} />
+        )}
+        {mode === 'inspect' && selectedAptId && !selectedRoom && property && (
+          <ApartmentWorkspace property={property} inspection={inspection}
+            onChange={handleInspectionChange} onOpenRoom={setSelectedRoom} />
+        )}
+        {mode === 'inspect' && selectedAptId && selectedRoom && property && (
+          <div className="px-4 pb-10">
+            <RoomScreen property={property} inspection={inspection} roomKey={selectedRoom}
+              onChange={handleInspectionChange} />
+          </div>
+        )}
+        {mode === 'shopping' && <ShoppingView properties={properties} inspections={inspections} />}
+        {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} />}
+      </main>
+
+      <footer className="text-center text-[10px] text-ice-100/30 py-3 no-print">
+        כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0
+      </footer>
+
+      {showConnect && <ConnectModal onClose={() => setShowConnect(false)} />}
+    </div>
+  );
+};
+
+/* =========================================================
+   18. MOUNT
+   ========================================================= */
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+setTimeout(() => document.getElementById('boot')?.remove(), 250);
+</script>
+</body>
+</html>
