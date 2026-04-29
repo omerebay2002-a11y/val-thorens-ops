@@ -1749,25 +1749,40 @@ const RoomSceneCard = ({ accent, eyebrow, title, subtitle, scene, headerExtra })
   );
 };
 
+const RoomFullList = ({ accent, items, inspectionRoom, capacity, onSelect }) => {
+  const tone = ROOM_ACCENT[accent];
+  const total = items.length;
+  let done = 0, issues = 0;
+  items.forEach(it => {
+    const s = inspectionRoom[it.key]?.status;
+    if (s && s !== 'pending') done += 1;
+    if (s === 'partial' || s === 'missing') issues += 1;
+  });
+  return (
+    <div className={`rounded-2xl glass border ${tone.ring} p-3`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className={`text-[10px] uppercase tracking-[0.18em] ${tone.text}/70 display`}>רשימה מלאה</div>
+        <div className="text-[10px] text-ice-100/50">
+          {done}/{total} נבדקו{issues > 0 ? ` · ${issues} ליקויים` : ''}
+        </div>
+      </div>
+      <InventoryGrid items={items} inspectionRoom={inspectionRoom} capacity={capacity} onSelect={onSelect} />
+    </div>
+  );
+};
+
 const BathroomDiagram = ({ inspection, capacity, onChange }) => {
   const { setSelectedKey, sheet } = useRoomSheet({
     inspection, categoryKey: 'bathroom', items: BATHROOM_ITEMS, capacity, onChange
   });
-  const SCENE_KEYS = new Set(['shower','showerScreen','toilet','toiletBrush','sink','mirror','towels','handTowels','hairDryer','ventilation','soapDispenser','trashBin','bathmat']);
-  const inventoryItems = BATHROOM_ITEMS.filter(i => !SCENE_KEYS.has(i.key));
   return (
     <Fragment>
       <div className="space-y-3 stagger">
         <RoomSceneCard accent="purple" eyebrow="Bathroom · 3D"
           title="חדר רחצה" subtitle={`${capacity} מגבות גוף · מקלחת + אסלה + כיור`}
           scene={<IsoBathroomScene inspection={inspection} onTap={setSelectedKey} />} />
-        {inventoryItems.length > 0 && (
-          <div className="rounded-2xl glass border border-purple-400/20 p-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-purple-300/70 display mb-2">פריטים נוספים</div>
-            <InventoryGrid items={inventoryItems} inspectionRoom={inspection.bathroom}
-              capacity={capacity} onSelect={setSelectedKey} />
-          </div>
-        )}
+        <RoomFullList accent="purple" items={BATHROOM_ITEMS} inspectionRoom={inspection.bathroom}
+          capacity={capacity} onSelect={setSelectedKey} />
       </div>
       {sheet}
     </Fragment>
@@ -1778,21 +1793,14 @@ const LivingDiagram = ({ inspection, capacity, onChange }) => {
   const { setSelectedKey, sheet } = useRoomSheet({
     inspection, categoryKey: 'dining', items: DINING_ITEMS, capacity, onChange
   });
-  const SCENE_KEYS = new Set(['diningTable','chairs','sofa','coffeeTable','tv','tvRemote','lights','rug']);
-  const inventoryItems = DINING_ITEMS.filter(i => !SCENE_KEYS.has(i.key));
   return (
     <Fragment>
       <div className="space-y-3 stagger">
         <RoomSceneCard accent="sky" eyebrow="Living · 3D"
           title="סלון ופינת אוכל" subtitle={`${capacity} כיסאות · TV · ספה`}
           scene={<IsoLivingScene inspection={inspection} capacity={capacity} onTap={setSelectedKey} />} />
-        {inventoryItems.length > 0 && (
-          <div className="rounded-2xl glass border border-sky-400/20 p-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-sky-300/70 display mb-2">פריטים נוספים</div>
-            <InventoryGrid items={inventoryItems} inspectionRoom={inspection.dining}
-              capacity={capacity} onSelect={setSelectedKey} />
-          </div>
-        )}
+        <RoomFullList accent="sky" items={DINING_ITEMS} inspectionRoom={inspection.dining}
+          capacity={capacity} onSelect={setSelectedKey} />
       </div>
       {sheet}
     </Fragment>
@@ -1803,21 +1811,14 @@ const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
   const { setSelectedKey, sheet } = useRoomSheet({
     inspection, categoryKey: 'general', items: GENERAL_ITEMS, capacity, onChange
   });
-  const SCENE_KEYS = new Set(['mattresses','pillows','blankets','sheets','wardrobe','hangers','bedsideLamp','heating','bulbs','curtains','wifi','keys','bootDryer','skiRack','iron','safe']);
-  const inventoryItems = GENERAL_ITEMS.filter(i => !SCENE_KEYS.has(i.key));
   return (
     <Fragment>
       <div className="space-y-3 stagger">
         <RoomSceneCard accent="emerald" eyebrow="Bedroom · 3D"
           title="חדרי שינה" subtitle={`${capacity} מזרנים · ${capacity} כריות · ${capacity} שמיכות`}
           scene={<IsoBedroomScene inspection={inspection} capacity={capacity} doubleBeds={doubleBeds} onTap={setSelectedKey} />} />
-        {inventoryItems.length > 0 && (
-          <div className="rounded-2xl glass border border-emerald-400/20 p-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/70 display mb-2">פריטים נוספים</div>
-            <InventoryGrid items={inventoryItems} inspectionRoom={inspection.general}
-              capacity={capacity} onSelect={setSelectedKey} />
-          </div>
-        )}
+        <RoomFullList accent="emerald" items={GENERAL_ITEMS} inspectionRoom={inspection.general}
+          capacity={capacity} onSelect={setSelectedKey} />
       </div>
       {sheet}
     </Fragment>
