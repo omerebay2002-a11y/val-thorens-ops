@@ -339,11 +339,17 @@ const GENERAL_ITEMS = [
 
 // Kitchen items have no auto-calculated target — user enters how many they have manually.
 // Non-kitchen items (bedroom, bathroom, dining) keep the per-person / fixed-count logic.
+// Optional `targets` lets the shopping-list calculator override the per-person value globally.
 const KITCHEN_KEYS = new Set([
   ...KITCHEN_MULTIPLIERS.map(i => i.key),
   ...KITCHEN_FIXED.map(i => i.key),
 ]);
-const getItemRequired = (item, capacity) => {
+const targetKey = (category, key) => `${category}:${key}`;
+const getItemRequired = (item, capacity, category, targets) => {
+  const override = targets && targets[targetKey(category, item.key)];
+  if (override && override.perPerson) {
+    return { required: capacity * override.perPerson, isCountable: true };
+  }
   if (KITCHEN_KEYS.has(item.key)) return { required: 1, isCountable: false };
   if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
   if (item.count && item.count > 1) return { required: item.count, isCountable: true };
@@ -362,7 +368,16 @@ const EXIT_CHECKLIST = [
 const STORAGE_KEYS = {
   properties:  'valthorens_properties_v1',
   inspections: 'valthorens_inspections_v1',
+  targets:     'valthorens_targets_v1',
 };
+
+const ALL_ITEMS_BY_CATEGORY = {
+  kitchen:  [...KITCHEN_MULTIPLIERS, ...KITCHEN_FIXED],
+  dining:   DINING_ITEMS,
+  bathroom: BATHROOM_ITEMS,
+  general:  GENERAL_ITEMS,
+};
+const findItemDef = (category, key) => (ALL_ITEMS_BY_CATEGORY[category] || []).find(i => i.key === key);
 
 /* =========================================================
    2. ICONS
@@ -488,7 +503,7 @@ const CATEGORY_META = {
   general:  { label: 'כללי',     accent: 'emerald' },
 };
 
-const computePropertyShortages = (property, inspection) => {
+const computePropertyShortages = (property, inspection, targets) => {
   if (!inspection) return [];
   const out = [];
   const cap = property.capacity;
@@ -502,20 +517,36 @@ const computePropertyShortages = (property, inspection) => {
   sources.forEach(({ category, items }) => {
     items.forEach(item => {
       const v = inspection[category]?.[item.key];
-      if (!v || v.status === 'ok' || v.status === 'pending') return;
-      const { required, isCountable } = getItemRequired(item, cap);
-      const qty = computeShortage(v, required, isCountable);
-      out.push({ category, key: item.key, label: item.label, status: v.status, note: v.note || '',
-                 required, presentCount: v.presentCount, qty, isMultiplier: isCountable });
+      const hasTarget = targets && targets[targetKey(category, item.key)];
+      // Skip nothing when a target override exists — it computes shortage from presentCount alone.
+      if (!hasTarget && (!v || v.status === 'ok' || v.status === 'pending')) return;
+
+      const { required, isCountable } = getItemRequired(item, cap, category, targets);
+
+      let qty;
+      if (hasTarget && isCountable) {
+        const present = Number(v?.presentCount);
+        const safe = Number.isFinite(present) && present >= 0 ? present : 0;
+        qty = Math.max(0, required - safe);
+        if (qty <= 0) return;
+      } else {
+        qty = computeShortage(v, required, isCountable);
+      }
+
+      out.push({
+        category, key: item.key, label: item.label,
+        status: v?.status || 'pending', note: v?.note || '',
+        required, presentCount: v?.presentCount, qty, isMultiplier: isCountable,
+      });
     });
   });
   return out;
 };
 
-const computeAggregateShortages = (properties, inspections) => {
+const computeAggregateShortages = (properties, inspections, targets) => {
   const map = {};
   properties.forEach(p => {
-    const list = computePropertyShortages(p, inspections[p.id]);
+    const list = computePropertyShortages(p, inspections[p.id], targets);
     list.forEach(entry => {
       const id = `${entry.category}:${entry.key}`;
       if (!map[id]) {
@@ -2493,13 +2524,123 @@ const SetupView = ({ properties, setProperties, inspections, setInspections }) =
    15. SHOPPING VIEW  (re-skinned)
    ========================================================= */
 
-const ShoppingView = ({ properties, inspections }) => {
+const TargetsCalculator = ({ targets, setTargets }) => {
+  const [open, setOpen] = useState(false);
+  const [draftCategory, setDraftCategory] = useState('kitchen');
+  const [draftItemKey, setDraftItemKey]   = useState('');
+  const [draftPerPerson, setDraftPerPerson] = useState(2);
+
+  const itemsForCategory = ALL_ITEMS_BY_CATEGORY[draftCategory] || [];
+  const targetEntries = Object.entries(targets);
+
+  const addTarget = () => {
+    if (!draftItemKey || !draftPerPerson || draftPerPerson <= 0) return;
+    const id = targetKey(draftCategory, draftItemKey);
+    setTargets(prev => ({ ...prev, [id]: { category: draftCategory, key: draftItemKey, perPerson: Number(draftPerPerson) } }));
+    setDraftItemKey('');
+  };
+  const removeTarget = (id) => {
+    setTargets(prev => { const next = { ...prev }; delete next[id]; return next; });
+  };
+
+  return (
+    <div className="rounded-2xl glass border border-copper-500/30 overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-3 flex items-center gap-3 text-right hover:bg-white/[0.03]">
+        <div className="w-10 h-10 rounded-xl bg-copper-500/15 border border-copper-500/30 text-copper-300 flex items-center justify-center shrink-0">
+          <IconSettings size={18}/>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="display text-base text-ice-50 leading-tight">מחשבון יעדים</div>
+          <div className="text-[11px] text-ice-100/50 mt-0.5">קבע כמה לאדם — החישוב אוטומטי לכל הדירות</div>
+        </div>
+        {targetEntries.length > 0 && (
+          <span className="shrink-0 px-2 py-0.5 rounded-full bg-copper-500/20 border border-copper-500/40 text-copper-200 text-[11px] font-bold tabular-nums">
+            {targetEntries.length}
+          </span>
+        )}
+        <IconChevron size={18} className={`text-ice-100/50 transition-transform ${open ? 'rotate-180' : ''}`}/>
+      </button>
+
+      {open && (
+        <div className="border-t border-white/5 bg-night-950/30 p-3 space-y-3 anim-drawer">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-ice-100/50 mb-1">קטגוריה</label>
+              <select value={draftCategory}
+                onChange={e => { setDraftCategory(e.target.value); setDraftItemKey(''); }}
+                className="w-full px-3 py-2 rounded-lg bg-night-800 border border-white/10 text-ice-50 text-sm outline-none focus:border-copper-400">
+                {Object.entries(CATEGORY_META).map(([k, m]) => (
+                  <option key={k} value={k}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-ice-100/50 mb-1">פריט</label>
+              <select value={draftItemKey}
+                onChange={e => setDraftItemKey(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-night-800 border border-white/10 text-ice-50 text-sm outline-none focus:border-copper-400">
+                <option value="">— בחר פריט —</option>
+                {itemsForCategory.map(it => (
+                  <option key={it.key} value={it.key}>{it.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-[10px] uppercase tracking-wider text-ice-100/50 mb-1">כמה לאדם</label>
+              <div className="flex items-center gap-1 rounded-lg bg-night-800 border border-white/10 px-1">
+                <button type="button" onClick={() => setDraftPerPerson(Math.max(1, draftPerPerson - 1))}
+                  className="w-9 h-9 rounded-md text-ice-100 text-lg font-bold hover:bg-white/[0.05]">−</button>
+                <input type="number" inputMode="numeric" min={1} value={draftPerPerson}
+                  onChange={e => { const n = parseInt(e.target.value, 10); setDraftPerPerson(Number.isFinite(n) && n > 0 ? n : 1); }}
+                  className="flex-1 text-center bg-transparent outline-none border-0 text-ice-50 font-bold tabular-nums"/>
+                <button type="button" onClick={() => setDraftPerPerson(draftPerPerson + 1)}
+                  className="w-9 h-9 rounded-md text-ice-100 text-lg font-bold hover:bg-white/[0.05]">+</button>
+              </div>
+            </div>
+            <button type="button" onClick={addTarget} disabled={!draftItemKey}
+              className="h-[42px] px-4 rounded-lg bg-copper-500 text-white font-bold text-sm shadow-[0_8px_24px_-8px_rgba(217,137,89,0.6)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-copper-600 active:scale-95">
+              שמור
+            </button>
+          </div>
+
+          {targetEntries.length > 0 && (
+            <div className="space-y-1.5 pt-2 border-t border-white/5">
+              <div className="text-[10px] uppercase tracking-wider text-ice-100/50">יעדים פעילים</div>
+              {targetEntries.map(([id, t]) => {
+                const meta = CATEGORY_META[t.category] || { label: t.category };
+                const itemDef = findItemDef(t.category, t.key);
+                const label = itemDef?.label || t.key;
+                return (
+                  <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-night-800/60 border border-white/5">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10 text-ice-100/70 shrink-0">{meta.label}</span>
+                    <span className="text-sm font-bold text-ice-50 flex-1 truncate">{label}</span>
+                    <span className="text-xs text-copper-300 font-bold tabular-nums shrink-0">{t.perPerson} × אדם</span>
+                    <button type="button" onClick={() => removeTarget(id)}
+                      className="shrink-0 p-1 rounded text-ice-100/50 hover:bg-rose-500/15 hover:text-rose-300">
+                      <IconX size={14}/>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
   const [groupBy, setGroupBy] = useState('item');
 
-  const aggregate = useMemo(() => computeAggregateShortages(properties, inspections), [properties, inspections]);
+  const aggregate = useMemo(() => computeAggregateShortages(properties, inspections, targets), [properties, inspections, targets]);
   const byProperty = useMemo(() => properties
-    .map(p => ({ property: p, list: computePropertyShortages(p, inspections[p.id]) }))
-    .filter(x => x.list.length > 0), [properties, inspections]);
+    .map(p => ({ property: p, list: computePropertyShortages(p, inspections[p.id], targets) }))
+    .filter(x => x.list.length > 0), [properties, inspections, targets]);
 
   const totalQty   = aggregate.reduce((s, a) => s + a.totalQty, 0);
   const totalLines = aggregate.length;
@@ -2540,13 +2681,16 @@ const ShoppingView = ({ properties, inspections }) => {
 
   if (aggregate.length === 0) {
     return (
-      <div className="px-4 py-10 text-center anim-fade-in">
-        <div className="rounded-3xl glass-strong border border-emerald-400/30 p-8">
-          <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center mx-auto mb-3 anim-ember">
-            <IconCheck size={36}/>
+      <div className="px-4 py-4 space-y-3 anim-fade-in">
+        <TargetsCalculator targets={targets} setTargets={setTargets} />
+        <div className="text-center pt-6">
+          <div className="rounded-3xl glass-strong border border-emerald-400/30 p-8">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center mx-auto mb-3 anim-ember">
+              <IconCheck size={36}/>
+            </div>
+            <h3 className="display text-2xl text-ice-50">אין כלום לקנות</h3>
+            <p className="text-sm text-ice-100/50 mt-2">קבע יעד במחשבון ונראה כמה חסר בפועל.</p>
           </div>
-          <h3 className="display text-2xl text-ice-50">אין כלום לקנות</h3>
-          <p className="text-sm text-ice-100/50 mt-2">כל הפריטים שנבדקו עד כה תקינים.</p>
         </div>
       </div>
     );
@@ -2554,6 +2698,7 @@ const ShoppingView = ({ properties, inspections }) => {
 
   return (
     <div className="px-4 py-4 space-y-3 anim-fade-in">
+      <TargetsCalculator targets={targets} setTargets={setTargets} />
       <div className="grid grid-cols-3 gap-2 stagger">
         <div className="rounded-xl glass border border-white/10 p-3 text-center">
           <div className="display text-2xl text-ice-50">{totalLines}</div>
@@ -2759,6 +2904,7 @@ const App = () => {
   const [mode, setMode] = useState('inspect'); // inspect | shopping | setup
   const [properties, setProperties]   = useState(() => safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES));
   const [inspections, setInspections] = useState(() => safeLoad(STORAGE_KEYS.inspections, {}));
+  const [targets, setTargets]         = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
 
   // Navigation: which apartment is open, and which room inside it.
@@ -2767,6 +2913,7 @@ const App = () => {
 
   useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
   useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); }, [inspections]);
+  useEffect(() => { safeSave(STORAGE_KEYS.targets, targets); }, [targets]);
 
   const setInspection = useCallback((id, ins) => {
     setInspections(prev => ({ ...prev, [id]: ins }));
@@ -2913,7 +3060,7 @@ const App = () => {
               onChange={handleInspectionChange} />
           </div>
         )}
-        {mode === 'shopping' && <ShoppingView properties={properties} inspections={inspections} />}
+        {mode === 'shopping' && <ShoppingView properties={properties} inspections={inspections} targets={targets} setTargets={setTargets} />}
         {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} />}
       </main>
 
