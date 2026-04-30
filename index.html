@@ -337,11 +337,8 @@ const GENERAL_ITEMS = [
   { key: 'safe',         label: 'כספת',            emoji: '🔒' },
 ];
 
-const getItemRequired = (item, capacity) => {
-  if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
-  if (item.count && item.count > 1) return { required: item.count, isCountable: true };
-  return { required: 1, isCountable: false };
-};
+// Auto-calculation removed — user manually enters how many they have via stepper.
+const getItemRequired = (_item, _capacity) => ({ required: 1, isCountable: false });
 
 const EXIT_CHECKLIST = [
   { key: 'cleanliness',    label: 'בדיקת ניקיון סופית' },
@@ -759,14 +756,10 @@ const Drawer = ({ icon, title, subtitle, accent = 'copper', defaultOpen = false,
 const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange, onClose }) => {
   if (!open || !item || !value) return null;
   const status = value.status || 'pending';
-  const showStepper = status === 'partial' && isMultiplier && requiredCount > 1;
-  const missing = value.presentCount == null ? 1 : Math.max(1, Math.min(requiredCount, requiredCount - (value.presentCount || 0)));
+  const have = Number.isFinite(value.presentCount) ? value.presentCount : 0;
 
   const setStatus = (s) => onChange({ ...value, status: s });
-  const setMissing = (m) => {
-    const clamped = Math.max(1, Math.min(requiredCount, m));
-    onChange({ ...value, presentCount: requiredCount - clamped });
-  };
+  const setHave = (n) => onChange({ ...value, presentCount: Math.max(0, n) });
   const clearStatus = () => onChange({ status: 'pending', note: '', presentCount: null });
 
   return (
@@ -780,11 +773,7 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             <div className="w-16 h-16 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-4xl shrink-0">{item.emoji}</div>
             <div className="flex-1 min-w-0">
               <div className="display text-2xl text-ice-50 leading-tight">{item.label}</div>
-              {requiredCount > 1 ? (
-                <div className="text-xs text-ice-100/50 mt-0.5">נדרש {requiredCount} יחידות בדירה</div>
-              ) : (
-                <div className="text-xs text-ice-100/50 mt-0.5">פריט יחיד</div>
-              )}
+              <div className="text-xs text-ice-100/50 mt-0.5">הזן כמה יש בדירה</div>
             </div>
             <button onClick={onClose} className="p-2 rounded-lg text-ice-100/60 hover:bg-white/[0.05] shrink-0">
               <IconX size={20}/>
@@ -812,7 +801,7 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
               <div className="text-xs mt-1.5">חלקי</div>
             </button>
             <button type="button"
-              onClick={() => { setStatus('missing'); if (!isMultiplier || requiredCount === 1) setTimeout(onClose, 180); }}
+              onClick={() => setStatus('missing')}
               className={`py-4 rounded-2xl border-2 font-bold transition active:scale-95 ${
                 status === 'missing'
                   ? 'bg-rose-500 text-white border-rose-500 shadow-[0_8px_24px_-8px_rgba(248,113,113,0.7)]'
@@ -823,19 +812,19 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             </button>
           </div>
 
-          {showStepper && (
-            <div className="mt-4 flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 anim-fade-in">
-              <span className="text-sm font-bold text-amber-200">חסרים</span>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setMissing(missing - 1)}
-                  className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-100 text-xl font-bold hover:bg-amber-500/25 active:scale-90 flex items-center justify-center">−</button>
-                <span className="display text-3xl text-amber-100 min-w-[3ch] text-center tabular-nums">{missing}</span>
-                <button type="button" onClick={() => setMissing(missing + 1)}
-                  className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-100 text-xl font-bold hover:bg-amber-500/25 active:scale-90 flex items-center justify-center">+</button>
-              </div>
-              <span className="text-xs text-amber-200/70">/ {requiredCount}</span>
+          <div className="mt-4 flex items-center justify-between gap-3 bg-ice-500/10 border border-ice-400/30 rounded-2xl px-4 py-3">
+            <span className="text-sm font-bold text-ice-100">כמה יש?</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setHave(have - 1)}
+                className="w-11 h-11 rounded-xl bg-ice-500/15 border border-ice-400/40 text-ice-100 text-xl font-bold hover:bg-ice-500/25 active:scale-90 flex items-center justify-center">−</button>
+              <input type="number" inputMode="numeric" min={0} value={have}
+                onChange={(e) => { const n = parseInt(e.target.value, 10); setHave(Number.isFinite(n) ? n : 0); }}
+                className="display text-3xl text-ice-50 min-w-[3ch] w-16 text-center tabular-nums bg-transparent outline-none border-0"/>
+              <button type="button" onClick={() => setHave(have + 1)}
+                className="w-11 h-11 rounded-xl bg-ice-500/15 border border-ice-400/40 text-ice-100 text-xl font-bold hover:bg-ice-500/25 active:scale-90 flex items-center justify-center">+</button>
             </div>
-          )}
+            <span className="text-[11px] text-ice-100/50">יחידות</span>
+          </div>
 
           {status !== 'pending' && (
             <button type="button" onClick={clearStatus}
@@ -1238,8 +1227,8 @@ const KitchenDiagram = ({ inspection, capacity, onChange }) => {
                 <div className="text-[11px] text-ice-100/50 mt-0.5">לחץ על מכשיר → בחר תקין/חלקי/חסר</div>
               </div>
               <div className="text-right">
-                <div className="display text-3xl text-copper-300 tabular-nums">{capacity * 2}</div>
-                <div className="text-[10px] text-ice-100/50 -mt-1">מכל סכו"ם</div>
+                <div className="display text-3xl text-copper-300 tabular-nums">{capacity}</div>
+                <div className="text-[10px] text-ice-100/50 -mt-1">תפוסה</div>
               </div>
             </div>
 
