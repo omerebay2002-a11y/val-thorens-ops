@@ -18,8 +18,13 @@ import RenovationSection from "./RenovationSection";
 import ExitChecklist from "./ExitChecklist";
 import CompletionButton from "./CompletionButton";
 import ShareMenu from "@/components/shared/ShareMenu";
-import { CATEGORIES } from "@/lib/data";
-import { isExitComplete, getApartmentStatus } from "@/lib/aggregators";
+import { CATEGORIES, isQuantityItem } from "@/lib/data";
+import {
+  isExitComplete,
+  getApartmentStatus,
+  countApartmentShortages,
+} from "@/lib/aggregators";
+import { useShoppingConfig } from "@/hooks/useShoppingConfig";
 import { formatApartmentReport } from "@/lib/whatsapp";
 import { downloadApartmentPDF } from "@/lib/pdf";
 import toast from "react-hot-toast";
@@ -49,20 +54,25 @@ export default function ApartmentCard({
   data,
   onUpdateField,
   onUpdateCheck,
+  onUpdateCount,
   onToggleExitCheck,
   onAddPhoto,
   onRemovePhoto,
   expanded,
   onToggleExpand,
 }) {
+  const { config } = useShoppingConfig();
   const exitDone = isExitComplete(data);
-  const status = getApartmentStatus(data);
+  const status = getApartmentStatus(data, apt, config);
   const statusBadge = STATUS_BADGES[status];
   const lastCheckedText = formatRelativeTime(data.lastChecked);
 
-  const issuesCount = Object.values(data.checks || {}).filter(
-    (c) => c.status === "missing" || c.status === "partial"
+  const statusIssues = Object.entries(data.checks || {}).filter(
+    ([item, c]) =>
+      !isQuantityItem(item) && (c.status === "missing" || c.status === "partial")
   ).length;
+  const quantityIssues = countApartmentShortages(apt, data, config);
+  const issuesCount = statusIssues + quantityIssues;
 
   const cardClass = data.completed
     ? "border-emerald-400 bg-emerald-50/30"
@@ -72,11 +82,11 @@ export default function ApartmentCard({
     ? "border-amber-200"
     : "border-slate-100 shadow-soft";
 
-  const handleShare = () => formatApartmentReport(apt, data);
+  const handleShare = () => formatApartmentReport(apt, data, config);
 
   const handlePDF = () => {
     try {
-      downloadApartmentPDF(apt, data);
+      downloadApartmentPDF(apt, data, config);
       toast.success("PDF הורד");
     } catch (e) {
       toast.error("שגיאה ביצירת PDF");
@@ -164,7 +174,7 @@ export default function ApartmentCard({
           <div className="flex justify-end">
             <ShareMenu
               title={apt.name}
-              text={formatApartmentReport(apt, data)}
+              text={formatApartmentReport(apt, data, config)}
               onPDF={handlePDF}
               label="שתף דירה"
             />
@@ -179,8 +189,12 @@ export default function ApartmentCard({
           <KitchenSection
             apt={apt}
             checks={data.checks}
+            counts={data.counts}
             onUpdateCheck={(item, status, note) =>
               onUpdateCheck(apt.name, item, status, note)
+            }
+            onUpdateCount={(item, count) =>
+              onUpdateCount(apt.name, item, count)
             }
           />
 

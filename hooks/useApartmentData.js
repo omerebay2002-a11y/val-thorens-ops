@@ -49,6 +49,21 @@ export function useApartmentData() {
     });
   }, []);
 
+  const updateCount = useCallback((aptName, item, count) => {
+    setData((prev) => {
+      const current = prev[aptName] || {};
+      const counts = current.counts || {};
+      return {
+        ...prev,
+        [aptName]: {
+          ...current,
+          counts: { ...counts, [item]: Math.max(0, count) },
+          lastChecked: Date.now(),
+        },
+      };
+    });
+  }, []);
+
   const toggleExitCheck = useCallback((aptName, item) => {
     setData((prev) => {
       const current = prev[aptName] || {};
@@ -103,6 +118,7 @@ export function useApartmentData() {
     isLoaded,
     updateField,
     updateCheck,
+    updateCount,
     toggleExitCheck,
     addPhoto,
     removePhoto,

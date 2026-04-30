@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ProgressRing from "@/components/ui/ProgressRing";
 import ShareMenu from "@/components/shared/ShareMenu";
 import { useApartmentData } from "@/hooks/useApartmentData";
+import { useShoppingConfig } from "@/hooks/useShoppingConfig";
 import {
   buildIssuesReport,
   getGlobalStats,
@@ -47,10 +48,14 @@ function StatCard({ label, value, color, icon: Icon }) {
 
 export default function DashboardPage() {
   const { data, isLoaded } = useApartmentData();
+  const { config } = useShoppingConfig();
 
-  const stats = useMemo(() => getGlobalStats(data), [data]);
-  const issues = useMemo(() => buildIssuesReport(data), [data]);
-  const shoppingCount = useMemo(() => buildShoppingList(data).length, [data]);
+  const stats = useMemo(() => getGlobalStats(data, config), [data, config]);
+  const issues = useMemo(() => buildIssuesReport(data, config), [data, config]);
+  const shoppingCount = useMemo(
+    () => buildShoppingList(data, config).length,
+    [data, config]
+  );
 
   const handlePDF = () => {
     try {
