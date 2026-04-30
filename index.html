@@ -337,8 +337,18 @@ const GENERAL_ITEMS = [
   { key: 'safe',         label: 'כספת',            emoji: '🔒' },
 ];
 
-// Auto-calculation removed — user manually enters how many they have via stepper.
-const getItemRequired = (_item, _capacity) => ({ required: 1, isCountable: false });
+// Kitchen items have no auto-calculated target — user enters how many they have manually.
+// Non-kitchen items (bedroom, bathroom, dining) keep the per-person / fixed-count logic.
+const KITCHEN_KEYS = new Set([
+  ...KITCHEN_MULTIPLIERS.map(i => i.key),
+  ...KITCHEN_FIXED.map(i => i.key),
+]);
+const getItemRequired = (item, capacity) => {
+  if (KITCHEN_KEYS.has(item.key)) return { required: 1, isCountable: false };
+  if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
+  if (item.count && item.count > 1) return { required: item.count, isCountable: true };
+  return { required: 1, isCountable: false };
+};
 
 const EXIT_CHECKLIST = [
   { key: 'cleanliness',    label: 'בדיקת ניקיון סופית' },
@@ -1228,7 +1238,7 @@ const KitchenDiagram = ({ inspection, capacity, onChange }) => {
               </div>
               <div className="text-right">
                 <div className="display text-3xl text-copper-300 tabular-nums">{capacity}</div>
-                <div className="text-[10px] text-ice-100/50 -mt-1">תפוסה</div>
+                <div className="text-[10px] text-ice-100/50 -mt-1">אנשים</div>
               </div>
             </div>
 
