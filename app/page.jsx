@@ -8,7 +8,6 @@ import BottomNav from "@/components/layout/BottomNav";
 import ApartmentCard from "@/components/apartment/ApartmentCard";
 import EmptyState from "@/components/ui/EmptyState";
 import { useApartmentData } from "@/hooks/useApartmentData";
-import { useShoppingConfig } from "@/hooks/useShoppingConfig";
 import { APARTMENT_LIST } from "@/lib/data";
 import {
   getApartmentStatus,
@@ -27,42 +26,33 @@ export default function HomePage() {
     isLoaded,
     updateField,
     updateCheck,
-    updateCount,
     toggleExitCheck,
     addPhoto,
     removePhoto,
     replaceAllData,
   } = useApartmentData();
 
-  const { config } = useShoppingConfig();
-
-  const stats = useMemo(() => getGlobalStats(data, config), [data, config]);
+  const stats = useMemo(() => getGlobalStats(data), [data]);
 
   const counts = useMemo(() => {
     const c = { all: APARTMENT_LIST.length, untouched: 0, in_progress: 0, issues: 0, done: 0 };
     APARTMENT_LIST.forEach((a) => {
-      const s = getApartmentStatus(data[a.name], a, config);
+      const s = getApartmentStatus(data[a.name]);
       c[s] = (c[s] || 0) + 1;
     });
     return c;
-  }, [data, config]);
+  }, [data]);
 
-  const shoppingCount = useMemo(
-    () => buildShoppingList(data, config).length,
-    [data, config]
-  );
-  const issuesCount = useMemo(
-    () => buildIssuesReport(data, config).length,
-    [data, config]
-  );
+  const shoppingCount = useMemo(() => buildShoppingList(data).length, [data]);
+  const issuesCount = useMemo(() => buildIssuesReport(data).length, [data]);
 
   const filtered = useMemo(() => {
     return APARTMENT_LIST.filter((a) => {
       if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (filter === "all") return true;
-      return getApartmentStatus(data[a.name], a, config) === filter;
+      return getApartmentStatus(data[a.name]) === filter;
     });
-  }, [data, search, filter, config]);
+  }, [data, search, filter]);
 
   useEffect(() => {
     if (expandedId) {
@@ -114,7 +104,6 @@ export default function HomePage() {
               data={data[apt.name] || {}}
               onUpdateField={updateField}
               onUpdateCheck={updateCheck}
-              onUpdateCount={updateCount}
               onToggleExitCheck={toggleExitCheck}
               onAddPhoto={addPhoto}
               onRemovePhoto={removePhoto}

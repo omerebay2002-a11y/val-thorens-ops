@@ -9,12 +9,10 @@ const heebo = Heebo({
   display: "swap",
 });
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
 export const metadata = {
   title: "Val Thorens Ops",
   description: "ניהול ובדיקת דירות בוואל טורנס",
-  manifest: `${basePath}/manifest.json`,
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -38,8 +36,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
       <head>
-        <link rel="icon" type="image/svg+xml" href={`${basePath}/icons/icon.svg`} />
-        <link rel="apple-touch-icon" href={`${basePath}/icons/icon.svg`} />
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className="font-sans antialiased">
         {children}
