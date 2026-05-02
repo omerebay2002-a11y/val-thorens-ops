@@ -588,25 +588,22 @@ const computeAggregateShortages = (properties, inspections, targets) => {
   });
 };
 
-const compressImage = (file, maxDim = 1280, quality = 0.7) =>
+/* ── Cloudinary upload (unsigned preset, browser-side) ── */
+const CLOUDINARY = { cloudName: 'dfejigl2j', preset: 'ml_default' };
+
+const compressFile = (file, maxDim = 1280, quality = 0.75) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
       img.onload = () => {
         let { width, height } = img;
-        if (width > height && width > maxDim) {
-          height = Math.round(height * (maxDim / width));
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round(width * (maxDim / height));
-          height = maxDim;
-        }
+        if (width > height && width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else if (height > maxDim)              { width  = Math.round(width  * (maxDim / height)); height = maxDim; }
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width; canvas.height = height;
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('blob fail')), 'image/jpeg', quality);
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -614,6 +611,22 @@ const compressImage = (file, maxDim = 1280, quality = 0.7) =>
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+const uploadToCloudinary = async (blob) => {
+  const fd = new FormData();
+  fd.append('file', blob);
+  fd.append('upload_preset', CLOUDINARY.preset);
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`, { method: 'POST', body: fd });
+  if (!r.ok) throw new Error('cloudinary ' + r.status);
+  const j = await r.json();
+  return j.secure_url;
+};
+
+// Main entry: compress + upload, returns the public URL
+const compressImage = async (file) => {
+  const blob = await compressFile(file);
+  return await uploadToCloudinary(blob);
+};
 
 /* =========================================================
    4. ROOM META  (which categories live where)
