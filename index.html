@@ -277,8 +277,6 @@ const KITCHEN_FIXED = [
   { key: 'microwave',     label: 'מיקרוגל',        emoji: '📦' },
   { key: 'dishwasher',    label: 'מדיח כלים',      emoji: '💧' },
   { key: 'kettle',        label: 'קומקום',         emoji: '🫖' },
-  { key: 'coffeeMachine', label: 'מכונת קפה',      emoji: '☕' },
-  { key: 'toaster',       label: 'מצנם',           emoji: '🍞' },
   { key: 'pans',          label: 'מחבתות',         emoji: '🍳', count: 2 },
   { key: 'pots',          label: 'סירים',          emoji: '🍲', count: 2 },
   { key: 'chefKnife',     label: 'סכין שף לחיתוך', emoji: '🔪' },
@@ -329,12 +327,7 @@ const GENERAL_ITEMS = [
   { key: 'heating',      label: 'חימום',           emoji: '♨️' },
   { key: 'bulbs',        label: 'נורות',           emoji: '💡' },
   { key: 'curtains',     label: 'וילונות',         emoji: '🪟' },
-  { key: 'wifi',         label: 'Wi-Fi',           emoji: '📶' },
   { key: 'keys',         label: 'מפתחות / שלט',    emoji: '🔑' },
-  { key: 'bootDryer',    label: 'מייבש מגפי סקי',  emoji: '🥾' },
-  { key: 'skiRack',      label: 'מתלה סקי',        emoji: '🎿' },
-  { key: 'iron',         label: 'מגהץ',            emoji: '👕' },
-  { key: 'safe',         label: 'כספת',            emoji: '🔒' },
 ];
 
 // Kitchen items have no auto-calculated target — user enters how many they have manually.
@@ -989,6 +982,12 @@ const InventoryGrid = ({ items, inspectionRoom, capacity, onSelect }) => (
 const useRoomSheet = ({ inspection, categoryKey, items, capacity, onChange }) => {
   const [selectedKey, setSelectedKey] = useState(null);
   const update = (key, value) => onChange({ ...inspection, [categoryKey]: { ...inspection[categoryKey], [key]: value }, updatedAt: Date.now() });
+  const markAllOk = () => {
+    if (!confirm('לסמן את כל הפריטים בחדר זה כ"תקין"?')) return;
+    const next = { ...inspection[categoryKey] };
+    items.forEach(it => { next[it.key] = { ...(next[it.key] || blankStatus()), status: 'ok' }; });
+    onChange({ ...inspection, [categoryKey]: next, updatedAt: Date.now() });
+  };
   const selectedItem  = selectedKey ? items.find(i => i.key === selectedKey) : null;
   const selectedValue = selectedKey ? (inspection[categoryKey][selectedKey] || blankStatus()) : null;
   const reqInfo = selectedItem ? getItemRequired(selectedItem, capacity) : null;
@@ -1003,7 +1002,7 @@ const useRoomSheet = ({ inspection, categoryKey, items, capacity, onChange }) =>
       onClose={() => setSelectedKey(null)}
     />
   );
-  return { selectedKey, setSelectedKey, sheet, update };
+  return { selectedKey, setSelectedKey, sheet, update, markAllOk };
 };
 
 /* ---------- Isometric Kitchen Scene ---------- */
@@ -1306,23 +1305,6 @@ const KitchenDiagram = ({ inspection, capacity, onChange }) => {
     inspection, categoryKey: 'kitchen', items: allItems, capacity, onChange
   });
 
-  // Items shown in the iso scene visually (the rest go to inventory grid below)
-  const SCENE_KEYS = new Set([
-    'fridge','oven','stove','microwave','dishwasher','sink',
-    'kettle','coffeeMachine','toaster','pots','pans',
-    'cuttingBoard','cookingSpoons','trashBin','spices','chefKnife'
-  ]);
-  const inventoryItems = allItems.filter(i => !SCENE_KEYS.has(i.key));
-
-  // Build summary stats
-  const total = allItems.length;
-  let done = 0, issues = 0;
-  allItems.forEach(item => {
-    const s = inspection.kitchen[item.key]?.status;
-    if (s && s !== 'pending') done += 1;
-    if (s === 'partial' || s === 'missing') issues += 1;
-  });
-
   return (
     <Fragment>
       <div className="space-y-3 stagger">
@@ -1355,18 +1337,9 @@ const KitchenDiagram = ({ inspection, capacity, onChange }) => {
           </div>
         </div>
 
-        {/* Inventory grid: cutlery + dishware + extras */}
-        <div className="rounded-2xl glass border border-copper-500/20 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.18em] text-copper-300/70 display">Cabinet · ארון</div>
-              <div className="display text-lg text-ice-50 leading-tight">סכו"ם וכלים</div>
-            </div>
-            <div className="text-[10px] text-ice-100/50">{done}/{total} נבדקו{issues > 0 ? ` · ${issues} ליקויים` : ''}</div>
-          </div>
-          <InventoryGrid items={inventoryItems} inspectionRoom={inspection.kitchen}
-            capacity={capacity} onSelect={setSelectedKey} />
-        </div>
+        {/* Full kitchen list — every item with label */}
+        <RoomFullList accent="copper" items={allItems} inspectionRoom={inspection.kitchen}
+          capacity={capacity} onSelect={setSelectedKey} />
       </div>
       {sheet}
     </Fragment>
@@ -1850,7 +1823,7 @@ const RoomSceneCard = ({ accent, eyebrow, title, subtitle, scene, headerExtra })
   );
 };
 
-const RoomFullList = ({ accent, items, inspectionRoom, capacity, onSelect }) => {
+const RoomFullList = ({ accent, items, inspectionRoom, capacity, onSelect, onMarkAllOk }) => {
   const tone = ROOM_ACCENT[accent];
   const total = items.length;
   let done = 0, issues = 0;
@@ -1867,13 +1840,19 @@ const RoomFullList = ({ accent, items, inspectionRoom, capacity, onSelect }) => 
           {done}/{total} נבדקו{issues > 0 ? ` · ${issues} ליקויים` : ''}
         </div>
       </div>
+      {onMarkAllOk && (
+        <button type="button" onClick={onMarkAllOk}
+          className="w-full mb-3 py-2 px-3 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 font-bold text-sm hover:bg-emerald-500/25 active:scale-[0.98] transition flex items-center justify-center gap-1.5">
+          <span>✓</span> סמן הכל כתקין
+        </button>
+      )}
       <InventoryGrid items={items} inspectionRoom={inspectionRoom} capacity={capacity} onSelect={onSelect} />
     </div>
   );
 };
 
 const BathroomDiagram = ({ inspection, capacity, onChange }) => {
-  const { setSelectedKey, sheet } = useRoomSheet({
+  const { setSelectedKey, sheet, markAllOk } = useRoomSheet({
     inspection, categoryKey: 'bathroom', items: BATHROOM_ITEMS, capacity, onChange
   });
   return (
@@ -1883,7 +1862,7 @@ const BathroomDiagram = ({ inspection, capacity, onChange }) => {
           title="חדר רחצה" subtitle={`${capacity} מגבות גוף · מקלחת + אסלה + כיור`}
           scene={<IsoBathroomScene inspection={inspection} onTap={setSelectedKey} />} />
         <RoomFullList accent="purple" items={BATHROOM_ITEMS} inspectionRoom={inspection.bathroom}
-          capacity={capacity} onSelect={setSelectedKey} />
+          capacity={capacity} onSelect={setSelectedKey} onMarkAllOk={markAllOk} />
       </div>
       {sheet}
     </Fragment>
@@ -1891,7 +1870,7 @@ const BathroomDiagram = ({ inspection, capacity, onChange }) => {
 };
 
 const LivingDiagram = ({ inspection, capacity, onChange }) => {
-  const { setSelectedKey, sheet } = useRoomSheet({
+  const { setSelectedKey, sheet, markAllOk } = useRoomSheet({
     inspection, categoryKey: 'dining', items: DINING_ITEMS, capacity, onChange
   });
   return (
@@ -1901,7 +1880,7 @@ const LivingDiagram = ({ inspection, capacity, onChange }) => {
           title="סלון ופינת אוכל" subtitle={`${capacity} כיסאות · TV · ספה`}
           scene={<IsoLivingScene inspection={inspection} capacity={capacity} onTap={setSelectedKey} />} />
         <RoomFullList accent="sky" items={DINING_ITEMS} inspectionRoom={inspection.dining}
-          capacity={capacity} onSelect={setSelectedKey} />
+          capacity={capacity} onSelect={setSelectedKey} onMarkAllOk={markAllOk} />
       </div>
       {sheet}
     </Fragment>
@@ -1909,7 +1888,7 @@ const LivingDiagram = ({ inspection, capacity, onChange }) => {
 };
 
 const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
-  const { setSelectedKey, sheet } = useRoomSheet({
+  const { setSelectedKey, sheet, markAllOk } = useRoomSheet({
     inspection, categoryKey: 'general', items: GENERAL_ITEMS, capacity, onChange
   });
   return (
@@ -1919,7 +1898,7 @@ const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
           title="חדרי שינה" subtitle={`${capacity} מזרנים · ${capacity} כריות · ${capacity} שמיכות`}
           scene={<IsoBedroomScene inspection={inspection} capacity={capacity} doubleBeds={doubleBeds} onTap={setSelectedKey} />} />
         <RoomFullList accent="emerald" items={GENERAL_ITEMS} inspectionRoom={inspection.general}
-          capacity={capacity} onSelect={setSelectedKey} />
+          capacity={capacity} onSelect={setSelectedKey} onMarkAllOk={markAllOk} />
       </div>
       {sheet}
     </Fragment>
