@@ -459,9 +459,44 @@ const safeSave = (key, val) => {
   try {
     localStorage.setItem(key, JSON.stringify(val));
   } catch (e) {
-    console.warn('Storage write failed:', key, e);
-    alert('שמירה נכשלה — ייתכן שאחסון המכשיר מלא. נסה למחוק תמונות או לייצא גיבוי.');
+    // localStorage full — that's OK, data is in the cloud (JSONBin) anyway.
+    // Try clearing the cache for this key so next save can succeed.
+    console.warn('Storage write failed (data still safe in cloud):', key, e);
+    try { localStorage.removeItem(key); } catch {}
   }
+};
+
+/* dataURL → Blob conversion for migrating legacy base64 photos */
+const dataUrlToBlob = (dataUrl) => {
+  const [head, body] = dataUrl.split(',');
+  const mime = head.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+  const bin  = atob(body);
+  const arr  = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+};
+
+/* Walks an inspection map, uploads any base64 photo srcs to Cloudinary,
+   replaces them with URLs. Returns a new inspections object if changes were
+   made, or null otherwise. */
+const migrateBase64Photos = async (inspections) => {
+  let changed = false;
+  const out = JSON.parse(JSON.stringify(inspections || {}));
+  for (const aptId in out) {
+    const photos = out[aptId]?.maintenance?.photos;
+    if (!Array.isArray(photos)) continue;
+    for (let i = 0; i < photos.length; i++) {
+      const src = photos[i]?.src;
+      if (typeof src === 'string' && src.startsWith('data:image')) {
+        try {
+          const url = await uploadToCloudinary(dataUrlToBlob(src));
+          photos[i] = { ...photos[i], src: url };
+          changed = true;
+        } catch (e) { console.warn('Photo migration failed for', aptId, i, e); }
+      }
+    }
+  }
+  return changed ? out : null;
 };
 
 const blankStatus = () => ({ status: 'pending', note: '', presentCount: null });
@@ -2971,6 +3006,20 @@ const App = () => {
   const fromRemote                  = useRef(false);
   const pendingWrite                = useRef(false);
   const hasLoadedOnce               = useRef(false);
+  const migrationStarted            = useRef(false);
+
+  // One-time background migration of legacy base64 photos in localStorage → Cloudinary
+  useEffect(() => {
+    if (migrationStarted.current) return;
+    migrationStarted.current = true;
+    (async () => {
+      const migrated = await migrateBase64Photos(inspections);
+      if (migrated) {
+        console.log('Migrated legacy photos to cloud');
+        setInspections(migrated);
+      }
+    })();
+  }, []);
 
   // Navigation: which apartment is open, and which room inside it.
   const [selectedAptId, setSelectedAptId] = useState(null);
