@@ -6,8 +6,6 @@
 <meta name="theme-color" content="#0a1628" />
 <title>בדיקת דירות – Val Thorens</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght,SOFT@9..144,300..900,30..100&display=swap" rel="stylesheet" />
@@ -373,18 +371,27 @@ const STORAGE_KEYS = {
   targets:     'valthorens_targets_v1',
 };
 
-/* ── Firebase sync helpers ── */
-const FB_CFG_KEY = 'valthorens_fb_cfg_v1';
-const getFbCfg   = () => { try { return JSON.parse(localStorage.getItem(FB_CFG_KEY)||'null'); } catch { return null; } };
-const saveFbCfg  = (cfg) => localStorage.setItem(FB_CFG_KEY, JSON.stringify(cfg));
-const clearFbCfg = () => localStorage.removeItem(FB_CFG_KEY);
+/* ── JSONBin sync helpers ── */
+const JB_CFG_KEY = 'valthorens_jb_cfg_v1';
+const getJbCfg   = () => { try { return JSON.parse(localStorage.getItem(JB_CFG_KEY)||'null'); } catch { return null; } };
+const saveJbCfg  = (cfg) => localStorage.setItem(JB_CFG_KEY, JSON.stringify(cfg));
+const clearJbCfg = () => localStorage.removeItem(JB_CFG_KEY);
 
-const openFbDb = (cfg) => {
-  if (!cfg?.databaseURL || typeof firebase === 'undefined') return null;
-  try {
-    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
-    return firebase.database(app);
-  } catch(e) { console.warn('Firebase init:', e); return null; }
+const jbRead = async (cfg) => {
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}/latest`, {
+    headers: { 'X-Master-Key': cfg.masterKey }
+  });
+  if (!r.ok) throw new Error(r.status);
+  return (await r.json()).record;
+};
+
+const jbWrite = async (cfg, data) => {
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.masterKey },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error(r.status);
 };
 
 const ALL_ITEMS_BY_CATEGORY = {
@@ -2394,62 +2401,87 @@ const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => 
    14. SETUP VIEW  (preserved with re-skinned UI)
    ========================================================= */
 
-const FirebaseSetupCard = ({ fbStatus, onConnect }) => {
-  const [raw, setRaw]     = useState(() => { const c=getFbCfg(); return c ? JSON.stringify(c,null,2) : ''; });
-  const [err, setErr]     = useState('');
-  const [saved, setSaved] = useState(false);
-  const connected = fbStatus === 'ok' || fbStatus === 'connecting';
+const CloudSyncCard = ({ syncStatus, onConnect }) => {
+  const saved_cfg = getJbCfg();
+  const [binId,     setBinId]     = useState(saved_cfg?.binId     || '');
+  const [masterKey, setMasterKey] = useState(saved_cfg?.masterKey || '');
+  const [err,       setErr]       = useState('');
+  const [testing,   setTesting]   = useState(false);
+  const [ok,        setOk]        = useState(false);
+  const connected = syncStatus === 'ok' || syncStatus === 'syncing';
 
-  const handleSave = () => {
-    setErr('');
+  const handleConnect = async () => {
+    setErr(''); setTesting(true);
+    const cfg = { binId: binId.trim(), masterKey: masterKey.trim() };
+    if (!cfg.binId || !cfg.masterKey) { setErr('יש למלא את שני השדות'); setTesting(false); return; }
     try {
-      const cfg = JSON.parse(raw);
-      if (!cfg.databaseURL) { setErr('חסר שדה databaseURL'); return; }
-      saveFbCfg(cfg);
-      const db = openFbDb(cfg);
-      if (!db) { setErr('אתחול Firebase נכשל — בדוק את הקונפיג'); return; }
-      onConnect(db);
-      setSaved(true); setTimeout(() => setSaved(false), 2000);
-    } catch { setErr('JSON לא תקין — בדוק פסיקים וסוגריים'); }
+      await jbRead(cfg);           // בדיקה שהחיבור עובד
+      saveJbCfg(cfg);
+      onConnect(cfg);
+      setOk(true); setTimeout(() => setOk(false), 2000);
+    } catch(e) {
+      setErr('חיבור נכשל — בדוק שה-Bin ID וה-Master Key נכונים');
+    } finally { setTesting(false); }
   };
 
-  const handleDisconnect = () => {
-    clearFbCfg();
-    onConnect(null);
-    setRaw('');
-  };
+  const handleDisconnect = () => { clearJbCfg(); onConnect(null); setBinId(''); setMasterKey(''); };
 
   return (
-    <div className="rounded-2xl glass border border-white/10 p-4 space-y-3">
+    <div className="rounded-2xl glass border border-white/10 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-lg">☁️</span>
+          <span className="text-xl">☁️</span>
           <h2 className="display text-xl text-ice-50">סנכרון ענן</h2>
         </div>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-          fbStatus==='ok'         ? 'bg-emerald-500/20 text-emerald-300' :
-          fbStatus==='connecting' ? 'bg-amber-500/20 text-amber-300' :
-          fbStatus==='error'      ? 'bg-rose-500/20 text-rose-300' :
-                                    'bg-white/10 text-ice-100/50'
+          syncStatus==='ok'     ? 'bg-emerald-500/20 text-emerald-300' :
+          syncStatus==='syncing'? 'bg-amber-500/20  text-amber-300'  :
+          syncStatus==='error'  ? 'bg-rose-500/20   text-rose-300'   :
+                                  'bg-white/10       text-ice-100/40'
         }`}>{
-          fbStatus==='ok' ? '● מחובר' : fbStatus==='connecting' ? '◌ מתחבר…' :
-          fbStatus==='error' ? '✕ שגיאה' : '○ לא מחובר'
+          syncStatus==='ok'      ? '● מחובר'   :
+          syncStatus==='syncing' ? '◌ מסנכרן…' :
+          syncStatus==='error'   ? '✕ שגיאה'   : '○ לא מחובר'
         }</span>
       </div>
-      <p className="text-xs text-ice-100/50">הדבק כאן את קונפיגורציית Firebase שלך (JSON). כל המשתמשים יראו ויערכו את אותם הנתונים בזמן אמת.</p>
-      <textarea
-        value={raw}
-        onChange={e => setRaw(e.target.value)}
-        rows={6}
-        dir="ltr"
-        placeholder={'{\n  "apiKey": "...",\n  "databaseURL": "https://....firebaseio.com",\n  "projectId": "..."\n}'}
-        className="w-full px-3 py-2 rounded-xl bg-night-950/60 border border-white/10 text-ice-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-copper-500 resize-none"
-      />
+
+      {/* הוראות קצרות */}
+      {!connected && (
+        <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-2 text-xs text-ice-100/70">
+          <p className="font-bold text-ice-50">3 צעדים חד-פעמיים (3 דקות):</p>
+          <ol className="list-decimal pr-4 space-y-1.5">
+            <li>כנס ל-<span className="text-copper-300 font-mono">jsonbin.io</span> ← לחץ <b>Sign Up</b> ← <b>Continue with Google</b></li>
+            <li>לחץ <b>+ Create Bin</b> ← בשם כתוב <b>valthorens</b> ← לחץ <b>Create</b><br/>
+                <span className="text-ice-100/50">ה-Bin ID מופיע ב-URL: jsonbin.io/b/<b className="text-copper-300">הID שלך</b></span></li>
+            <li>בתפריט שמאל ← <b>API Keys</b> ← <b>Create Key</b> ← שם כלשהו ← <b>Create</b><br/>
+                <span className="text-ice-100/50">העתק את ה-<b>Master Key</b> (מתחיל ב-$2a$)</span></li>
+          </ol>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label className="block">
+          <span className="text-xs text-ice-100/60 block mb-1">Bin ID</span>
+          <input type="text" value={binId} onChange={e => setBinId(e.target.value)}
+            placeholder="64abc123def456..."
+            dir="ltr"
+            className="w-full px-3 py-2 rounded-xl bg-night-950/60 border border-white/10 text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-copper-500"/>
+        </label>
+        <label className="block">
+          <span className="text-xs text-ice-100/60 block mb-1">Master Key <span className="text-ice-100/40">(מתחיל ב-$2a$)</span></span>
+          <input type="password" value={masterKey} onChange={e => setMasterKey(e.target.value)}
+            placeholder="$2a$10$..."
+            dir="ltr"
+            className="w-full px-3 py-2 rounded-xl bg-night-950/60 border border-white/10 text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-copper-500"/>
+        </label>
+      </div>
+
       {err && <p className="text-xs text-rose-300 flex items-center gap-1"><IconAlert size={12}/>{err}</p>}
+
       <div className="flex gap-2">
-        <button type="button" onClick={handleSave}
-          className="flex-1 py-2 rounded-xl bg-gradient-to-l from-copper-500 to-copper-400 text-white font-bold text-sm hover:brightness-110">
-          {saved ? '✓ נשמר!' : connected ? 'עדכן חיבור' : 'התחבר'}
+        <button type="button" onClick={handleConnect} disabled={testing}
+          className="flex-1 py-2.5 rounded-xl bg-gradient-to-l from-copper-500 to-copper-400 text-white font-bold text-sm hover:brightness-110 disabled:opacity-50">
+          {testing ? '…בודק' : ok ? '✓ מחובר!' : connected ? 'עדכן' : 'התחבר'}
         </button>
         {connected && (
           <button type="button" onClick={handleDisconnect}
@@ -2458,23 +2490,11 @@ const FirebaseSetupCard = ({ fbStatus, onConnect }) => {
           </button>
         )}
       </div>
-      {!connected && (
-        <details className="text-xs text-ice-100/50">
-          <summary className="cursor-pointer hover:text-ice-100 transition">איך יוצרים פרויקט Firebase חינמי? ▸</summary>
-          <ol className="mt-2 pr-4 list-decimal space-y-1 text-ice-100/60">
-            <li>כנס ל-<span className="text-copper-300 font-mono">console.firebase.google.com</span></li>
-            <li>לחץ "הוסף פרויקט" → שם → ללא Analytics → צור</li>
-            <li>Realtime Database → צור מסד נתונים → מצב בדיקה (30 יום) → אפשר</li>
-            <li>הגדרות הפרויקט (גלגל שיניים) → הוסף אפליקציית Web → רשום → העתק את firebaseConfig</li>
-            <li>הדבק כאן את ה-JSON ולחץ "התחבר"</li>
-          </ol>
-        </details>
-      )}
     </div>
   );
 };
 
-const SetupView = ({ properties, setProperties, inspections, setInspections, fbStatus, onFbConnect }) => {
+const SetupView = ({ properties, setProperties, inspections, setInspections, syncStatus, onJbConnect }) => {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState({ name: '', capacity: 2, doubleBeds: 0 });
   const [adding, setAdding] = useState(false);
@@ -2506,7 +2526,7 @@ const SetupView = ({ properties, setProperties, inspections, setInspections, fbS
 
   return (
     <div className="px-4 py-4 space-y-3 anim-fade-in">
-      <FirebaseSetupCard fbStatus={fbStatus} onConnect={onFbConnect} />
+      <CloudSyncCard syncStatus={syncStatus} onConnect={onJbConnect} />
       <div className="rounded-2xl glass border border-white/10 p-4">
         <div className="flex items-center gap-2 text-ice-100">
           <IconSettings size={18}/>
@@ -3004,47 +3024,59 @@ const App = () => {
   const [targets, setTargets]         = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
 
-  // Firebase sync
-  const [fbDb, setFbDb]         = useState(() => openFbDb(getFbCfg()));
-  const [fbStatus, setFbStatus] = useState(getFbCfg() ? 'connecting' : 'off');
-  const fromRemote              = useRef(false);
+  // JSONBin cloud sync
+  const [jbCfg, setJbCfg]       = useState(() => getJbCfg());
+  const [syncStatus, setSyncStatus] = useState(getJbCfg() ? 'syncing' : 'off');
+  const fromRemote               = useRef(false);
+  const pendingWrite             = useRef(false);
 
   // Navigation: which apartment is open, and which room inside it.
   const [selectedAptId, setSelectedAptId] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
-  // Real-time Firebase listener
+  // Poll JSONBin every 30s + initial load
   useEffect(() => {
-    if (!fbDb) { setFbStatus('off'); return; }
-    setFbStatus('connecting');
-    const ref = fbDb.ref('/valthorens');
-    ref.on('value', (snap) => {
-      const data = snap.val();
-      if (data) {
+    if (!jbCfg) { setSyncStatus('off'); return; }
+    let cancelled = false;
+    const poll = async () => {
+      if (pendingWrite.current) return; // skip poll while writing
+      try {
+        const data = await jbRead(jbCfg);
+        if (cancelled || !data) return;
         fromRemote.current = true;
         if (data.properties)  setProperties(data.properties);
         if (data.inspections) setInspections(data.inspections);
         if (data.targets)     setTargets(data.targets);
         setTimeout(() => { fromRemote.current = false; }, 50);
-      }
-      setFbStatus('ok');
-    }, () => setFbStatus('error'));
-    return () => ref.off('value');
-  }, [fbDb]);
+        setSyncStatus('ok');
+      } catch { if (!cancelled) setSyncStatus('error'); }
+    };
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [jbCfg]);
 
-  // Persist locally + push to Firebase on every change
-  useEffect(() => {
-    safeSave(STORAGE_KEYS.properties, properties);
-    if (fbDb && !fromRemote.current) fbDb.ref('/valthorens/properties').set(properties).catch(()=>{});
-  }, [properties]);
-  useEffect(() => {
-    safeSave(STORAGE_KEYS.inspections, inspections);
-    if (fbDb && !fromRemote.current) fbDb.ref('/valthorens/inspections').set(inspections).catch(()=>{});
-  }, [inspections]);
-  useEffect(() => {
-    safeSave(STORAGE_KEYS.targets, targets);
-    if (fbDb && !fromRemote.current) fbDb.ref('/valthorens/targets').set(targets).catch(()=>{});
-  }, [targets]);
+  // Write to JSONBin whenever state changes (debounced via ref)
+  const writeTimeout = useRef(null);
+  const scheduleWrite = useCallback((props, insps, tgts) => {
+    if (!jbCfg || fromRemote.current) return;
+    clearTimeout(writeTimeout.current);
+    writeTimeout.current = setTimeout(async () => {
+      pendingWrite.current = true;
+      setSyncStatus('syncing');
+      try {
+        await jbWrite(jbCfg, { properties: props, inspections: insps, targets: tgts });
+        setSyncStatus('ok');
+      } catch { setSyncStatus('error'); }
+      finally { pendingWrite.current = false; }
+    }, 1500);
+  }, [jbCfg]);
+
+  // Persist locally always; cloud write on change
+  useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
+  useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); }, [inspections]);
+  useEffect(() => { safeSave(STORAGE_KEYS.targets, targets); }, [targets]);
+  useEffect(() => { scheduleWrite(properties, inspections, targets); }, [properties, inspections, targets, scheduleWrite]);
 
   const setInspection = useCallback((id, ins) => {
     setInspections(prev => ({ ...prev, [id]: ins }));
@@ -3129,11 +3161,11 @@ const App = () => {
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              {fbStatus !== 'off' && (
+              {syncStatus !== 'off' && (
                 <span className={`w-2 h-2 rounded-full ${
-                  fbStatus==='ok' ? 'bg-emerald-400' :
-                  fbStatus==='connecting' ? 'bg-amber-400 animate-pulse' : 'bg-rose-400'
-                }`} title={fbStatus==='ok' ? 'מסונכרן' : fbStatus==='connecting' ? 'מתחבר…' : 'שגיאת חיבור'}/>
+                  syncStatus==='ok'      ? 'bg-emerald-400' :
+                  syncStatus==='syncing' ? 'bg-amber-400 animate-pulse' : 'bg-rose-400'
+                }`} title={syncStatus==='ok' ? 'מסונכרן' : syncStatus==='syncing' ? 'מסנכרן…' : 'שגיאת חיבור'}/>
               )}
               <input ref={importInputRef} type="file" accept="application/json" onChange={importJSON} className="hidden" />
               <button type="button" onClick={() => setShowConnect(true)} className="p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]" title="התחבר לטלפון"><IconPhone size={18}/></button>
@@ -3198,7 +3230,7 @@ const App = () => {
           </div>
         )}
         {mode === 'shopping' && <ShoppingView properties={properties} inspections={inspections} targets={targets} setTargets={setTargets} />}
-        {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} fbStatus={fbStatus} onFbConnect={(db) => { setFbDb(db); setFbStatus(db ? 'connecting' : 'off'); }} />}
+        {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} syncStatus={syncStatus} onJbConnect={(cfg) => { setJbCfg(cfg); setSyncStatus(cfg ? 'syncing' : 'off'); }} />}
       </main>
 
       <footer className="text-center text-[10px] text-ice-100/30 py-3 no-print">
