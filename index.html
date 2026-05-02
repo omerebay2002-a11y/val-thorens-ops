@@ -371,24 +371,24 @@ const STORAGE_KEYS = {
   targets:     'valthorens_targets_v1',
 };
 
-/* ── JSONBin sync helpers ── */
-const JB_CFG_KEY = 'valthorens_jb_cfg_v1';
-const getJbCfg   = () => { try { return JSON.parse(localStorage.getItem(JB_CFG_KEY)||'null'); } catch { return null; } };
-const saveJbCfg  = (cfg) => localStorage.setItem(JB_CFG_KEY, JSON.stringify(cfg));
-const clearJbCfg = () => localStorage.removeItem(JB_CFG_KEY);
+/* ── JSONBin sync (cloud sync for all users — pre-configured) ── */
+const JB_CFG = {
+  binId:     '69f63918856a6821899b57b3',
+  masterKey: '$2a$10$OAgObvMVWHWThMcGzDXUG.O5CXJmXau79Erkast7ekq8GUylIbcMO',
+};
 
-const jbRead = async (cfg) => {
-  const r = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}/latest`, {
-    headers: { 'X-Master-Key': cfg.masterKey }
+const jbRead = async () => {
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${JB_CFG.binId}/latest`, {
+    headers: { 'X-Master-Key': JB_CFG.masterKey }
   });
   if (!r.ok) throw new Error(r.status);
   return (await r.json()).record;
 };
 
-const jbWrite = async (cfg, data) => {
-  const r = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
+const jbWrite = async (data) => {
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${JB_CFG.binId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.masterKey },
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JB_CFG.masterKey },
     body: JSON.stringify(data)
   });
   if (!r.ok) throw new Error(r.status);
@@ -2401,100 +2401,29 @@ const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => 
    14. SETUP VIEW  (preserved with re-skinned UI)
    ========================================================= */
 
-const CloudSyncCard = ({ syncStatus, onConnect }) => {
-  const saved_cfg = getJbCfg();
-  const [binId,     setBinId]     = useState(saved_cfg?.binId     || '');
-  const [masterKey, setMasterKey] = useState(saved_cfg?.masterKey || '');
-  const [err,       setErr]       = useState('');
-  const [testing,   setTesting]   = useState(false);
-  const [ok,        setOk]        = useState(false);
-  const connected = syncStatus === 'ok' || syncStatus === 'syncing';
-
-  const handleConnect = async () => {
-    setErr(''); setTesting(true);
-    const cfg = { binId: binId.trim(), masterKey: masterKey.trim() };
-    if (!cfg.binId || !cfg.masterKey) { setErr('יש למלא את שני השדות'); setTesting(false); return; }
-    try {
-      await jbRead(cfg);           // בדיקה שהחיבור עובד
-      saveJbCfg(cfg);
-      onConnect(cfg);
-      setOk(true); setTimeout(() => setOk(false), 2000);
-    } catch(e) {
-      setErr('חיבור נכשל — בדוק שה-Bin ID וה-Master Key נכונים');
-    } finally { setTesting(false); }
-  };
-
-  const handleDisconnect = () => { clearJbCfg(); onConnect(null); setBinId(''); setMasterKey(''); };
-
-  return (
-    <div className="rounded-2xl glass border border-white/10 p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">☁️</span>
-          <h2 className="display text-xl text-ice-50">סנכרון ענן</h2>
-        </div>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-          syncStatus==='ok'     ? 'bg-emerald-500/20 text-emerald-300' :
-          syncStatus==='syncing'? 'bg-amber-500/20  text-amber-300'  :
-          syncStatus==='error'  ? 'bg-rose-500/20   text-rose-300'   :
-                                  'bg-white/10       text-ice-100/40'
-        }`}>{
-          syncStatus==='ok'      ? '● מחובר'   :
-          syncStatus==='syncing' ? '◌ מסנכרן…' :
-          syncStatus==='error'   ? '✕ שגיאה'   : '○ לא מחובר'
-        }</span>
+const CloudSyncCard = ({ syncStatus }) => (
+  <div className="rounded-2xl glass border border-white/10 p-4 space-y-2">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-xl">☁️</span>
+        <h2 className="display text-xl text-ice-50">סנכרון ענן</h2>
       </div>
-
-      {/* הוראות קצרות */}
-      {!connected && (
-        <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-2 text-xs text-ice-100/70">
-          <p className="font-bold text-ice-50">3 צעדים חד-פעמיים (3 דקות):</p>
-          <ol className="list-decimal pr-4 space-y-1.5">
-            <li>כנס ל-<span className="text-copper-300 font-mono">jsonbin.io</span> ← לחץ <b>Sign Up</b> ← <b>Continue with Google</b></li>
-            <li>לחץ <b>+ Create Bin</b> ← בשם כתוב <b>valthorens</b> ← לחץ <b>Create</b><br/>
-                <span className="text-ice-100/50">ה-Bin ID מופיע ב-URL: jsonbin.io/b/<b className="text-copper-300">הID שלך</b></span></li>
-            <li>בתפריט שמאל ← <b>API Keys</b> ← <b>Create Key</b> ← שם כלשהו ← <b>Create</b><br/>
-                <span className="text-ice-100/50">העתק את ה-<b>Master Key</b> (מתחיל ב-$2a$)</span></li>
-          </ol>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <label className="block">
-          <span className="text-xs text-ice-100/60 block mb-1">Bin ID</span>
-          <input type="text" value={binId} onChange={e => setBinId(e.target.value)}
-            placeholder="64abc123def456..."
-            dir="ltr"
-            className="w-full px-3 py-2 rounded-xl bg-night-950/60 border border-white/10 text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-copper-500"/>
-        </label>
-        <label className="block">
-          <span className="text-xs text-ice-100/60 block mb-1">Master Key <span className="text-ice-100/40">(מתחיל ב-$2a$)</span></span>
-          <input type="password" value={masterKey} onChange={e => setMasterKey(e.target.value)}
-            placeholder="$2a$10$..."
-            dir="ltr"
-            className="w-full px-3 py-2 rounded-xl bg-night-950/60 border border-white/10 text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-copper-500"/>
-        </label>
-      </div>
-
-      {err && <p className="text-xs text-rose-300 flex items-center gap-1"><IconAlert size={12}/>{err}</p>}
-
-      <div className="flex gap-2">
-        <button type="button" onClick={handleConnect} disabled={testing}
-          className="flex-1 py-2.5 rounded-xl bg-gradient-to-l from-copper-500 to-copper-400 text-white font-bold text-sm hover:brightness-110 disabled:opacity-50">
-          {testing ? '…בודק' : ok ? '✓ מחובר!' : connected ? 'עדכן' : 'התחבר'}
-        </button>
-        {connected && (
-          <button type="button" onClick={handleDisconnect}
-            className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-400/30 font-bold text-sm hover:bg-rose-500/20">
-            נתק
-          </button>
-        )}
-      </div>
+      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+        syncStatus==='ok'      ? 'bg-emerald-500/20 text-emerald-300' :
+        syncStatus==='syncing' ? 'bg-amber-500/20   text-amber-300'   :
+                                 'bg-rose-500/20    text-rose-300'
+      }`}>{
+        syncStatus==='ok'      ? '● מסונכרן'  :
+        syncStatus==='syncing' ? '◌ מסנכרן…' : '✕ שגיאת רשת'
+      }</span>
     </div>
-  );
-};
+    <p className="text-xs text-ice-100/60">
+      כל הנתונים נשמרים אוטומטית בענן ומשותפים בין כולם. כל שינוי שאת/ה עושה מופיע אצל הבוסים שלך תוך 15 שניות.
+    </p>
+  </div>
+);
 
-const SetupView = ({ properties, setProperties, inspections, setInspections, syncStatus, onJbConnect }) => {
+const SetupView = ({ properties, setProperties, inspections, setInspections, syncStatus }) => {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState({ name: '', capacity: 2, doubleBeds: 0 });
   const [adding, setAdding] = useState(false);
@@ -2526,7 +2455,7 @@ const SetupView = ({ properties, setProperties, inspections, setInspections, syn
 
   return (
     <div className="px-4 py-4 space-y-3 anim-fade-in">
-      <CloudSyncCard syncStatus={syncStatus} onConnect={onJbConnect} />
+      <CloudSyncCard syncStatus={syncStatus} />
       <div className="rounded-2xl glass border border-white/10 p-4">
         <div className="flex items-center gap-2 text-ice-100">
           <IconSettings size={18}/>
@@ -3024,55 +2953,55 @@ const App = () => {
   const [targets, setTargets]         = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
 
-  // JSONBin cloud sync
-  const [jbCfg, setJbCfg]       = useState(() => getJbCfg());
-  const [syncStatus, setSyncStatus] = useState(getJbCfg() ? 'syncing' : 'off');
-  const fromRemote               = useRef(false);
-  const pendingWrite             = useRef(false);
+  // Cloud sync (auto-connected for all users)
+  const [syncStatus, setSyncStatus] = useState('syncing'); // syncing | ok | error
+  const fromRemote                  = useRef(false);
+  const pendingWrite                = useRef(false);
+  const hasLoadedOnce               = useRef(false);
 
   // Navigation: which apartment is open, and which room inside it.
   const [selectedAptId, setSelectedAptId] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
-  // Poll JSONBin every 30s + initial load
+  // Poll cloud every 15s + initial load
   useEffect(() => {
-    if (!jbCfg) { setSyncStatus('off'); return; }
     let cancelled = false;
     const poll = async () => {
-      if (pendingWrite.current) return; // skip poll while writing
+      if (pendingWrite.current) return; // skip poll during write
       try {
-        const data = await jbRead(jbCfg);
+        const data = await jbRead();
         if (cancelled || !data) return;
         fromRemote.current = true;
-        if (data.properties)  setProperties(data.properties);
-        if (data.inspections) setInspections(data.inspections);
-        if (data.targets)     setTargets(data.targets);
+        if (Array.isArray(data.properties) && data.properties.length) setProperties(data.properties);
+        if (data.inspections && Object.keys(data.inspections).length)  setInspections(data.inspections);
+        if (data.targets     && Object.keys(data.targets).length)      setTargets(data.targets);
         setTimeout(() => { fromRemote.current = false; }, 50);
+        hasLoadedOnce.current = true;
         setSyncStatus('ok');
       } catch { if (!cancelled) setSyncStatus('error'); }
     };
     poll();
-    const id = setInterval(poll, 30000);
+    const id = setInterval(poll, 15000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [jbCfg]);
+  }, []);
 
-  // Write to JSONBin whenever state changes (debounced via ref)
+  // Debounced cloud write on every state change
   const writeTimeout = useRef(null);
   const scheduleWrite = useCallback((props, insps, tgts) => {
-    if (!jbCfg || fromRemote.current) return;
+    if (fromRemote.current || !hasLoadedOnce.current) return;
     clearTimeout(writeTimeout.current);
     writeTimeout.current = setTimeout(async () => {
       pendingWrite.current = true;
       setSyncStatus('syncing');
       try {
-        await jbWrite(jbCfg, { properties: props, inspections: insps, targets: tgts });
+        await jbWrite({ properties: props, inspections: insps, targets: tgts });
         setSyncStatus('ok');
       } catch { setSyncStatus('error'); }
       finally { pendingWrite.current = false; }
     }, 1500);
-  }, [jbCfg]);
+  }, []);
 
-  // Persist locally always; cloud write on change
+  // Persist locally + push to cloud on change
   useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
   useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); }, [inspections]);
   useEffect(() => { safeSave(STORAGE_KEYS.targets, targets); }, [targets]);
@@ -3230,7 +3159,7 @@ const App = () => {
           </div>
         )}
         {mode === 'shopping' && <ShoppingView properties={properties} inspections={inspections} targets={targets} setTargets={setTargets} />}
-        {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} syncStatus={syncStatus} onJbConnect={(cfg) => { setJbCfg(cfg); setSyncStatus(cfg ? 'syncing' : 'off'); }} />}
+        {mode === 'setup'    && <SetupView    properties={properties} setProperties={setProperties} inspections={inspections} setInspections={setInspections} syncStatus={syncStatus} />}
       </main>
 
       <footer className="text-center text-[10px] text-ice-100/30 py-3 no-print">
