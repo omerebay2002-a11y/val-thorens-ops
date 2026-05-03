@@ -2985,6 +2985,7 @@ const App = () => {
   const fromRemote                  = useRef(false);
   const pendingWrite                = useRef(false);
   const hasLoadedOnce               = useRef(false);
+  const inspectionsRef              = useRef({});
   const migrationStarted            = useRef(false);
 
   // One-time background migration of legacy base64 photos in localStorage → Cloudinary
@@ -3023,12 +3024,26 @@ const App = () => {
       try {
         const data = await jbRead();
         if (cancelled || !data) return;
-        fromRemote.current = true;
         if (Array.isArray(data.properties) && data.properties.length) setProperties(data.properties);
-        if (data.inspections && Object.keys(data.inspections).length)
-          setInspections(prev => mergeInspections(prev, data.inspections));
+        if (data.inspections && Object.keys(data.inspections).length) {
+          // Compute merge synchronously using ref (setState updater is async)
+          const current = inspectionsRef.current;
+          const merged  = mergeInspections(current, data.inspections);
+          const localWasNewer = Object.keys(current).some(
+            id => (current[id]?.updatedAt||0) > (data.inspections[id]?.updatedAt||0)
+          );
+          setInspections(merged);
+          if (!localWasNewer) {
+            // Cloud was fully ahead — block the write trigger so we don't echo back
+            fromRemote.current = true;
+            setTimeout(() => { fromRemote.current = false; }, 50);
+          }
+          // If localWasNewer: leave fromRemote=false → state change triggers a healing write
+        } else {
+          fromRemote.current = true;
+          setTimeout(() => { fromRemote.current = false; }, 50);
+        }
         if (data.targets && Object.keys(data.targets).length) setTargets(data.targets);
-        setTimeout(() => { fromRemote.current = false; }, 50);
         hasLoadedOnce.current = true;
         setSyncStatus('ok');
       } catch { if (!cancelled) setSyncStatus('error'); }
@@ -3038,20 +3053,18 @@ const App = () => {
     return () => { cancelled = true; clearInterval(id); };
   }, [mergeInspections]);
 
-  // Debounced cloud write — read-modify-write to avoid clobbering parallel edits
+  // Debounced cloud write — jitter + read-merge-write
   const writeTimeout = useRef(null);
   const scheduleWrite = useCallback((props, insps, tgts) => {
     if (fromRemote.current || !hasLoadedOnce.current) return;
     clearTimeout(writeTimeout.current);
     writeTimeout.current = setTimeout(async () => {
+      await new Promise(r => setTimeout(r, Math.random() * 2000)); // jitter
       pendingWrite.current = true;
       setSyncStatus('syncing');
       try {
-        // Read current cloud state, merge our inspections on top, then write back
         const cloud = await jbRead();
-        const merged = cloud?.inspections
-          ? mergeInspections(insps, cloud.inspections)  // our edits win for apartments we touched
-          : insps;
+        const merged = cloud?.inspections ? mergeInspections(insps, cloud.inspections) : insps;
         await jbWrite({ properties: props, inspections: merged, targets: tgts });
         setSyncStatus('ok');
       } catch { setSyncStatus('error'); }
@@ -3061,7 +3074,7 @@ const App = () => {
 
   // Persist locally + push to cloud on change
   useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
-  useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); }, [inspections]);
+  useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); inspectionsRef.current = inspections; }, [inspections]);
   useEffect(() => { safeSave(STORAGE_KEYS.targets, targets); }, [targets]);
   useEffect(() => { scheduleWrite(properties, inspections, targets); }, [properties, inspections, targets, scheduleWrite]);
 
