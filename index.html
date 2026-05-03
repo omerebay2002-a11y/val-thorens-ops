@@ -225,37 +225,37 @@ const BUILDINGS = [
 
 /* Note: Machu, Pichu, Cusco are wings of "Le Temple du Soleil" residence */
 const INITIAL_PROPERTIES = [
-  { id: 'olympiades-112',     name: 'Olympiades 112',     building: 'olympiades',    capacity: 2, doubleBeds: 1 },
-  { id: 'neves-194',          name: 'Neves 194',          building: 'neves',         capacity: 6, doubleBeds: 0 },
-  { id: 'la-vanoise-473',     name: 'La Vanoise 473',     building: 'la-vanoise',    capacity: 3, doubleBeds: 1 },
-  { id: 'neves-67',           name: 'Neves 67',           building: 'neves',         capacity: 5, doubleBeds: 0 },
-  { id: 'altineige-28',       name: 'Altineige 28',       building: 'altineige',     capacity: 5, doubleBeds: 0 },
-  { id: 'glaciers-7',         name: 'Glaciers 7',         building: 'glaciers',      capacity: 5, doubleBeds: 0 },
-  { id: 'glaciers-31',        name: 'Glaciers 31',        building: 'glaciers',      capacity: 4, doubleBeds: 0 },
-  { id: 'machu-801',          name: 'Machu 801',          building: 'temple-soleil', capacity: 5, doubleBeds: 0 },
-  { id: 'machu-803',          name: 'Machu 803',          building: 'temple-soleil', capacity: 5, doubleBeds: 0 },
-  { id: 'pichu-408',          name: 'Pichu 408',          building: 'temple-soleil', capacity: 5, doubleBeds: 0 },
-  { id: 'cusco-h26',          name: 'Cusco H26',          building: 'temple-soleil', capacity: 6, doubleBeds: 0 },
-  { id: 'machu-603',          name: 'Machu 603',          building: 'temple-soleil', capacity: 5, doubleBeds: 0 },
-  { id: 'altineige-208',      name: 'Altineige 208',      building: 'altineige',     capacity: 4, doubleBeds: 0 },
-  { id: 'altineige-203',      name: 'Altineige 203',      building: 'altineige',     capacity: 5, doubleBeds: 0 },
-  { id: 'le-serac-j10',       name: 'Le Sérac J10',       building: 'le-serac',      capacity: 2, doubleBeds: 2 },
-  { id: 'dome-de-polset-315', name: 'Dome de Polset 315', building: 'dome-polset',   capacity: 3, doubleBeds: 0 },
-  { id: 'cime-de-caron-1304', name: 'Cime De Caron 1304', building: 'cime-caron',    capacity: 5, doubleBeds: 1 },
-  { id: 'joker-c3',           name: 'Joker C3',           building: 'joker',         capacity: 6, doubleBeds: 2 },
-  { id: 'joker-c4',           name: 'Joker C4',           building: 'joker',         capacity: 6, doubleBeds: 2 },
+  { id: 'altineige-28',       name: 'Altineige 2',        building: 'altineige',     capacity: 5, doubleBeds: 0, code: '6095' },
+  { id: 'altineige-203',      name: 'Altineige 203',      building: 'altineige',     capacity: 5, doubleBeds: 0, code: '5124', codeNote: 'Key Box in Lobby' },
+  { id: 'altineige-208',      name: 'Altineige 208',      building: 'altineige',     capacity: 4, doubleBeds: 0, code: '1321' },
+  { id: 'le-serac-j10',       name: 'Le Sérac J10',       building: 'le-serac',      capacity: 2, doubleBeds: 2, code: '9476' },
+  { id: 'le-serac-k10',       name: 'Le Sérac K10',       building: 'le-serac',      capacity: 6, doubleBeds: 1, code: '9247' },
+  { id: 'neves-67',           name: 'Neves 67',           building: 'neves',         capacity: 5, doubleBeds: 0, code: '7855' },
+  { id: 'neves-194',          name: 'Neves 194',          building: 'neves',         capacity: 6, doubleBeds: 0, code: '5831' },
+  { id: 'olympiades-112',     name: 'Olympiades 112',     building: 'olympiades',    capacity: 2, doubleBeds: 1, code: '2004' },
+  { id: 'la-vanoise-473',     name: 'La Vanoise 473',     building: 'la-vanoise',    capacity: 3, doubleBeds: 1, code: '2475' },
+  { id: 'dome-de-polset-315', name: 'Dome 315',           building: 'dome-polset',   capacity: 3, doubleBeds: 0, code: '1208' },
+  { id: 'machu-801',          name: 'Machu 801',          building: 'temple-soleil', capacity: 5, doubleBeds: 0, code: '1971' },
+  { id: 'machu-803',          name: 'Machu 803',          building: 'temple-soleil', capacity: 5, doubleBeds: 0, code: '1968' },
+  { id: 'machu-603',          name: 'Machu 603',          building: 'temple-soleil', capacity: 5, doubleBeds: 0, code: '2502' },
+  { id: 'pichu-408',          name: 'Pichu 408',          building: 'temple-soleil', capacity: 5, doubleBeds: 0, code: '1971' },
+  { id: 'cusco-h26',          name: 'Cuzco 26H',          building: 'temple-soleil', capacity: 6, doubleBeds: 0, code: '2308' },
+  { id: 'cusco-e18',          name: 'Cuzco E18',          building: 'temple-soleil', capacity: 6, doubleBeds: 0, code: '4729' },
+  { id: 'cusco-e19',          name: 'Cuzco E19',          building: 'temple-soleil', capacity: 6, doubleBeds: 0, code: '8356' },
+  { id: 'cusco-e20',          name: 'Cuzco E20',          building: 'temple-soleil', capacity: 6, doubleBeds: 0, code: '1493' },
+  { id: 'cusco-k4',           name: 'Cuzco 4K',           building: 'temple-soleil', capacity: 6, doubleBeds: 0, code: '0301' },
+  { id: 'glaciers-7',         name: 'Glaciers 7',         building: 'glaciers',      capacity: 5, doubleBeds: 0, code: '6891' },
+  { id: 'glaciers-31',        name: 'Glaciers 31',        building: 'glaciers',      capacity: 4, doubleBeds: 0, code: '2515' },
+  { id: 'cime-de-caron-1304', name: 'Cime de Caron 1304', building: 'cime-caron',    capacity: 5, doubleBeds: 1, code: '7062' },
+  { id: 'arcelle-304',        name: 'Arcelle 304',        building: 'arcelle',       capacity: 6, doubleBeds: 0, code: '5992' },
+  { id: 'joker-16',           name: 'Joker 16',           building: 'joker',         capacity: 6, doubleBeds: 2, code: '1016' },
+  { id: 'joker-c3',           name: 'Joker C3',           building: 'joker',         capacity: 6, doubleBeds: 2, code: '1003' },
+  { id: 'joker-c4',           name: 'Joker C4',           building: 'joker',         capacity: 6, doubleBeds: 2, code: '1004' },
   { id: 'joker-c8',           name: 'Joker C8',           building: 'joker',         capacity: 6, doubleBeds: 2 },
-  { id: 'joker-16',           name: 'Joker 16',           building: 'joker',         capacity: 6, doubleBeds: 2 },
-  { id: 'joker-b3',           name: 'Joker B3',           building: 'joker',         capacity: 3, doubleBeds: 0 },
-  { id: 'joker-b4',           name: 'Joker B4',           building: 'joker',         capacity: 3, doubleBeds: 1 },
-  { id: 'joker-b6',           name: 'Joker B6',           building: 'joker',         capacity: 3, doubleBeds: 1 },
-  { id: 'arcelle-304',        name: 'Arcelle 304',        building: 'arcelle',       capacity: 6, doubleBeds: 0 },
-  { id: 'cusco-e18',          name: 'Cusco E18',          building: 'temple-soleil', capacity: 6, doubleBeds: 0 },
-  { id: 'cusco-e19',          name: 'Cusco E19',          building: 'temple-soleil', capacity: 6, doubleBeds: 0 },
-  { id: 'cusco-e20',          name: 'Cusco E20',          building: 'temple-soleil', capacity: 6, doubleBeds: 0 },
-  { id: 'le-serac-k10',       name: 'Le Sérac K10',       building: 'le-serac',      capacity: 6, doubleBeds: 1 },
-  { id: 'cusco-k4',           name: 'Cusco K4',           building: 'temple-soleil', capacity: 6, doubleBeds: 0 },
-  { id: 'lauzieres-612',      name: 'Lauzières 612',      building: 'lauzieres',     capacity: 6, doubleBeds: 1 },
+  { id: 'joker-b3',           name: 'Joker B3',           building: 'joker',         capacity: 3, doubleBeds: 0, code: '5007' },
+  { id: 'joker-b4',           name: 'Joker B4',           building: 'joker',         capacity: 3, doubleBeds: 1, code: '5233' },
+  { id: 'joker-b6',           name: 'Joker B6',           building: 'joker',         capacity: 3, doubleBeds: 1, code: '5234' },
+  { id: 'lauzieres-612',      name: "L'Auzière 612",      building: 'lauzieres',     capacity: 6, doubleBeds: 1, code: '1806' },
 ];
 
 const KITCHEN_MULTIPLIERS = [
@@ -927,9 +927,17 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             <span className="text-[11px] text-ice-100/50">יחידות</span>
           </div>
 
+          <textarea
+            rows={2}
+            placeholder="הערה (אופציונלי)"
+            value={value.note || ''}
+            onChange={e => onChange({ ...value, note: e.target.value })}
+            className="mt-3 w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-ice-100 text-sm placeholder-ice-100/30 focus:outline-none focus:ring-2 focus:ring-copper-500 resize-none"
+          />
+
           {status !== 'pending' && (
             <button type="button" onClick={clearStatus}
-              className="mt-3 w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-ice-100/70 text-sm hover:bg-white/[0.08] transition">
+              className="mt-2 w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-ice-100/70 text-sm hover:bg-white/[0.08] transition">
               נקה סימון
             </button>
           )}
@@ -952,19 +960,27 @@ const InventoryGrid = ({ items, inspectionRoom, capacity, onSelect }) => (
       const shortage = computeShortage(v, required, isCountable);
       return (
         <button key={item.key} type="button" onClick={() => onSelect(item.key)}
-          className={`relative aspect-square rounded-2xl border ${visual.ring} ${visual.bg} flex flex-col items-center justify-center gap-1 p-1 transition active:scale-95 hover:scale-[1.03] ${v.status === 'missing' ? 'anim-warn' : ''}`}>
-          <span className="text-2xl">{item.emoji}</span>
-          <span className="text-[10px] text-ice-100/80 text-center leading-tight px-1">{item.label}</span>
-          {isCountable && required > 1 && (
-            <span className="text-[9px] font-bold text-ice-100/60 tabular-nums">×{required}</span>
+          className={`relative rounded-2xl border ${visual.ring} ${visual.bg} flex flex-col items-center justify-center gap-0.5 p-1.5 transition active:scale-95 hover:scale-[1.03] ${v.status === 'missing' ? 'anim-warn' : ''}`}
+          style={{ minHeight: '80px' }}>
+          <span className="text-xl">{item.emoji}</span>
+          <span className="text-[10px] text-ice-100/80 text-center leading-tight px-0.5">{item.label}</span>
+          {/* יש / חסר */}
+          {(v.presentCount != null || shortage > 0) && (
+            <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-center">
+              {v.presentCount != null && (
+                <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/15 px-1 rounded">יש {v.presentCount}</span>
+              )}
+              {shortage > 0 && (
+                <span className="text-[9px] font-bold text-rose-200 bg-rose-500/20 px-1 rounded">חסר {shortage}</span>
+              )}
+            </div>
+          )}
+          {/* הערה */}
+          {v.note?.trim() && (
+            <span className="text-[8px] text-amber-300/80 leading-tight text-center px-0.5 truncate w-full">📝 {v.note}</span>
           )}
           <span className={`absolute top-1.5 left-1.5 w-2 h-2 rounded-full ${visual.dot}`}
             style={{ filter: v.status !== 'pending' ? `drop-shadow(0 0 4px currentColor)` : 'none' }}/>
-          {shortage > 0 && (
-            <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-rose-500/30 border border-rose-400/40 text-rose-100 text-[9px] font-bold">
-              {shortage}
-            </span>
-          )}
         </button>
       );
     })}
@@ -2195,6 +2211,12 @@ const AptCard = ({ property, inspection, onClick, index }) => {
             <span>תפוסה {property.capacity}</span>
             {property.doubleBeds > 0 && <><span>·</span><span>{property.doubleBeds} זוגיות</span></>}
           </div>
+          {property.code && (
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="font-mono font-bold text-[12px] tracking-widest text-copper-300 bg-copper-500/10 border border-copper-500/30 px-1.5 py-0.5 rounded-md">{property.code}</span>
+              {property.codeNote && <span className="text-[10px] text-ice-100/40">{property.codeNote}</span>}
+            </div>
+          )}
         </div>
       </div>
       <div className="relative mt-2 flex items-center justify-between">
