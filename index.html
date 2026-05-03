@@ -3004,18 +3004,30 @@ const App = () => {
   const [selectedAptId, setSelectedAptId] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
+  // Merge inspections by updatedAt — keeps the newer version per apartment
+  const mergeInspections = useCallback((local, remote) => {
+    const merged = { ...remote };
+    for (const id in local) {
+      if ((local[id]?.updatedAt || 0) > (remote[id]?.updatedAt || 0)) {
+        merged[id] = local[id];
+      }
+    }
+    return merged;
+  }, []);
+
   // Poll cloud every 15s + initial load
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
-      if (pendingWrite.current) return; // skip poll during write
+      if (pendingWrite.current) return;
       try {
         const data = await jbRead();
         if (cancelled || !data) return;
         fromRemote.current = true;
         if (Array.isArray(data.properties) && data.properties.length) setProperties(data.properties);
-        if (data.inspections && Object.keys(data.inspections).length)  setInspections(data.inspections);
-        if (data.targets     && Object.keys(data.targets).length)      setTargets(data.targets);
+        if (data.inspections && Object.keys(data.inspections).length)
+          setInspections(prev => mergeInspections(prev, data.inspections));
+        if (data.targets && Object.keys(data.targets).length) setTargets(data.targets);
         setTimeout(() => { fromRemote.current = false; }, 50);
         hasLoadedOnce.current = true;
         setSyncStatus('ok');
@@ -3024,9 +3036,9 @@ const App = () => {
     poll();
     const id = setInterval(poll, 15000);
     return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  }, [mergeInspections]);
 
-  // Debounced cloud write on every state change
+  // Debounced cloud write — read-modify-write to avoid clobbering parallel edits
   const writeTimeout = useRef(null);
   const scheduleWrite = useCallback((props, insps, tgts) => {
     if (fromRemote.current || !hasLoadedOnce.current) return;
@@ -3035,12 +3047,17 @@ const App = () => {
       pendingWrite.current = true;
       setSyncStatus('syncing');
       try {
-        await jbWrite({ properties: props, inspections: insps, targets: tgts });
+        // Read current cloud state, merge our inspections on top, then write back
+        const cloud = await jbRead();
+        const merged = cloud?.inspections
+          ? mergeInspections(insps, cloud.inspections)  // our edits win for apartments we touched
+          : insps;
+        await jbWrite({ properties: props, inspections: merged, targets: tgts });
         setSyncStatus('ok');
       } catch { setSyncStatus('error'); }
       finally { pendingWrite.current = false; }
     }, 1500);
-  }, []);
+  }, [mergeInspections]);
 
   // Persist locally + push to cloud on change
   useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
