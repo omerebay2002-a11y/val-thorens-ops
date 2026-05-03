@@ -489,7 +489,7 @@ const migrateBase64Photos = async (inspections) => {
   return changed ? out : null;
 };
 
-const blankStatus = () => ({ status: 'pending', note: '', presentCount: null });
+const blankStatus = () => ({ status: 'pending', note: '', presentCount: null, missingCount: null });
 
 const createBlankInspection = () => {
   const fillStatus = (items) => Object.fromEntries(items.map(i => [i.key, blankStatus()]));
@@ -532,7 +532,10 @@ const inspectionHasIssues = (insp) => {
 };
 
 const computeShortage = (value, requiredCount, isMultiplier) => {
-  if (!value || value.status === 'ok' || value.status === 'pending') return 0;
+  if (!value || value.status === 'pending') return 0;
+  // Explicit missingCount always wins — user entered it directly
+  if (Number.isFinite(value.missingCount) && value.missingCount >= 0) return value.missingCount;
+  if (value.status === 'ok') return 0;
   if (isMultiplier && requiredCount) {
     if (value.status === 'missing') return requiredCount;
     if (value.status === 'partial') {
@@ -858,11 +861,13 @@ const Drawer = ({ icon, title, subtitle, accent = 'copper', defaultOpen = false,
 const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange, onClose }) => {
   if (!open || !item || !value) return null;
   const status = value.status || 'pending';
-  const have = Number.isFinite(value.presentCount) ? value.presentCount : 0;
+  const have    = Number.isFinite(value.presentCount)  ? value.presentCount  : 0;
+  const missing = Number.isFinite(value.missingCount)  ? value.missingCount  : 0;
 
-  const setStatus = (s) => onChange({ ...value, status: s });
-  const setHave = (n) => onChange({ ...value, presentCount: Math.max(0, n) });
-  const clearStatus = () => onChange({ status: 'pending', note: '', presentCount: null });
+  const setStatus  = (s) => onChange({ ...value, status: s });
+  const setHave    = (n) => onChange({ ...value, presentCount:  Math.max(0, n) });
+  const setMissing = (n) => onChange({ ...value, missingCount:  Math.max(0, n), status: n > 0 ? 'partial' : value.status });
+  const clearStatus = () => onChange({ status: 'pending', note: '', presentCount: null, missingCount: null });
 
   return (
     <div className="fixed inset-0 z-40 bg-night-950/70 backdrop-blur-sm flex items-end justify-center anim-fade-in"
@@ -929,24 +934,20 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             <span className="text-[11px] text-ice-100/50">יחידות</span>
           </div>
 
-          {/* כמה חסר — linked: missing = required - have */}
-          {requiredCount > 0 && (() => {
-            const missing = Math.max(0, requiredCount - have);
-            const setMissing = (n) => setHave(Math.max(0, requiredCount - n));
-            return (
-              <div className="mt-2 flex items-center justify-between gap-3 bg-rose-500/10 border border-rose-400/30 rounded-2xl px-4 py-3">
-                <span className="text-sm font-bold text-rose-200">כמה חסר?</span>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setMissing(missing - 1)}
-                    className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">−</button>
-                  <span className="display text-3xl text-rose-100 min-w-[3ch] w-16 text-center tabular-nums">{missing}</span>
-                  <button type="button" onClick={() => setMissing(missing + 1)}
-                    className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">+</button>
-                </div>
-                <span className="text-[11px] text-rose-200/50">מתוך {requiredCount}</span>
-              </div>
-            );
-          })()}
+          {/* כמה חסר — עצמאי, נכנס ישירות לרשימת הקניות */}
+          <div className="mt-2 flex items-center justify-between gap-3 bg-rose-500/10 border border-rose-400/30 rounded-2xl px-4 py-3">
+            <span className="text-sm font-bold text-rose-200">כמה חסר?</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setMissing(missing - 1)}
+                className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">−</button>
+              <input type="number" inputMode="numeric" min={0} value={missing}
+                onChange={(e) => { const n = parseInt(e.target.value, 10); setMissing(Number.isFinite(n) ? n : 0); }}
+                className="display text-3xl text-rose-100 min-w-[3ch] w-16 text-center tabular-nums bg-transparent outline-none border-0"/>
+              <button type="button" onClick={() => setMissing(missing + 1)}
+                className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">+</button>
+            </div>
+            <span className="text-[11px] text-rose-200/50">→ קניות</span>
+          </div>
 
           <textarea
             rows={2}
@@ -986,13 +987,13 @@ const InventoryGrid = ({ items, inspectionRoom, capacity, onSelect }) => (
           <span className="text-xl">{item.emoji}</span>
           <span className="text-[10px] text-ice-100/80 text-center leading-tight px-0.5">{item.label}</span>
           {/* יש / חסר */}
-          {(v.presentCount != null || shortage > 0) && (
+          {(v.presentCount != null || v.missingCount != null || shortage > 0) && (
             <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-center">
               {v.presentCount != null && (
                 <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/15 px-1 rounded">יש {v.presentCount}</span>
               )}
-              {shortage > 0 && (
-                <span className="text-[9px] font-bold text-rose-200 bg-rose-500/20 px-1 rounded">חסר {shortage}</span>
+              {(v.missingCount != null ? v.missingCount : shortage) > 0 && (
+                <span className="text-[9px] font-bold text-rose-200 bg-rose-500/20 px-1 rounded">חסר {v.missingCount != null ? v.missingCount : shortage}</span>
               )}
             </div>
           )}
