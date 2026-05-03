@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0a1628" />
 <title>בדיקת דירות – Val Thorens</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght,SOFT@9..144,300..900,30..100&display=swap" rel="stylesheet" />
@@ -365,28 +367,18 @@ const STORAGE_KEYS = {
   targets:     'valthorens_targets_v1',
 };
 
-/* ── JSONBin sync (cloud sync for all users — pre-configured) ── */
-const JB_CFG = {
-  binId:     '69f63918856a6821899b57b3',
-  masterKey: '$2a$10$OAgObvMVWHWThMcGzDXUG.O5CXJmXau79Erkast7ekq8GUylIbcMO',
+/* ── Firebase Realtime Database sync ── */
+const FIREBASE_CFG = {
+  apiKey:            'AIzaSyDiQYmA_d16jyG0tmaOwZRYXRjkKg0zPG4',
+  authDomain:        'val-thorens-ops.firebaseapp.com',
+  databaseURL:       'https://val-thorens-ops-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:         'val-thorens-ops',
+  storageBucket:     'val-thorens-ops.firebasestorage.app',
+  messagingSenderId: '813389121712',
+  appId:             '1:813389121712:web:ce4860079ee0d696d61375',
 };
-
-const jbRead = async () => {
-  const r = await fetch(`https://api.jsonbin.io/v3/b/${JB_CFG.binId}/latest`, {
-    headers: { 'X-Master-Key': JB_CFG.masterKey }
-  });
-  if (!r.ok) throw new Error(r.status);
-  return (await r.json()).record;
-};
-
-const jbWrite = async (data) => {
-  const r = await fetch(`https://api.jsonbin.io/v3/b/${JB_CFG.binId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JB_CFG.masterKey },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error(r.status);
-};
+const firebaseApp = firebase.initializeApp(FIREBASE_CFG);
+const db = firebase.database(firebaseApp);
 
 const ALL_ITEMS_BY_CATEGORY = {
   kitchen:  [...KITCHEN_MULTIPLIERS, ...KITCHEN_FIXED],
@@ -3098,7 +3090,6 @@ const App = () => {
   // Cloud sync (auto-connected for all users)
   const [syncStatus, setSyncStatus] = useState('syncing'); // syncing | ok | error
   const fromRemote                  = useRef(false);
-  const pendingWrite                = useRef(false);
   const hasLoadedOnce               = useRef(false);
   const inspectionsRef              = useRef({});
   const migrationStarted            = useRef(false);
@@ -3131,67 +3122,71 @@ const App = () => {
     return merged;
   }, []);
 
-  // Poll cloud every 15s + initial load
+  // Firebase real-time listener — replaces 15s poll
   useEffect(() => {
-    let cancelled = false;
-    const poll = async () => {
-      if (pendingWrite.current) return;
-      try {
-        const data = await jbRead();
-        if (cancelled || !data) return;
-        if (Array.isArray(data.properties) && data.properties.length) setProperties(data.properties);
-        if (data.inspections && Object.keys(data.inspections).length) {
-          // Compute merge synchronously using ref (setState updater is async)
-          const current = inspectionsRef.current;
-          const merged  = mergeInspections(current, data.inspections);
-          const localWasNewer = Object.keys(current).some(
-            id => (current[id]?.updatedAt||0) > (data.inspections[id]?.updatedAt||0)
-          );
-          setInspections(merged);
-          if (!localWasNewer) {
-            // Cloud was fully ahead — block the write trigger so we don't echo back
-            fromRemote.current = true;
-            setTimeout(() => { fromRemote.current = false; }, 50);
-          }
-          // If localWasNewer: leave fromRemote=false → state change triggers a healing write
-        } else {
-          fromRemote.current = true;
-          setTimeout(() => { fromRemote.current = false; }, 50);
-        }
-        if (data.targets && Object.keys(data.targets).length) setTargets(data.targets);
-        hasLoadedOnce.current = true;
-        setSyncStatus('ok');
-      } catch { if (!cancelled) setSyncStatus('error'); }
-    };
-    poll();
-    const id = setInterval(poll, 15000);
-    return () => { cancelled = true; clearInterval(id); };
+    const ref = db.ref('inspections');
+    const handler = ref.on('value', (snapshot) => {
+      const remote = snapshot.val() || {};
+      const local  = inspectionsRef.current;
+      const merged = mergeInspections(local, remote);
+      const localWasNewer = Object.keys(local).some(
+        id => (local[id]?.updatedAt || 0) > (remote[id]?.updatedAt || 0)
+      );
+      setInspections(merged);
+      if (!localWasNewer) {
+        fromRemote.current = true;
+        setTimeout(() => { fromRemote.current = false; }, 50);
+      }
+      // If localWasNewer: fromRemote stays false → write effect heals to Firebase
+      hasLoadedOnce.current = true;
+      setSyncStatus('ok');
+    }, () => setSyncStatus('error'));
+
+    db.ref('properties').once('value').then(s => {
+      const p = s.val();
+      if (Array.isArray(p) && p.length) setProperties(p);
+    });
+    db.ref('targets').once('value').then(s => {
+      const t = s.val();
+      if (t && Object.keys(t).length) setTargets(t);
+    });
+
+    return () => ref.off('value', handler);
   }, [mergeInspections]);
 
-  // Debounced cloud write — jitter + read-merge-write
-  const writeTimeout = useRef(null);
-  const scheduleWrite = useCallback((props, insps, tgts) => {
-    if (fromRemote.current || !hasLoadedOnce.current) return;
-    clearTimeout(writeTimeout.current);
-    writeTimeout.current = setTimeout(async () => {
-      await new Promise(r => setTimeout(r, Math.random() * 2000)); // jitter
-      pendingWrite.current = true;
-      setSyncStatus('syncing');
-      try {
-        const cloud = await jbRead();
-        const merged = cloud?.inspections ? mergeInspections(insps, cloud.inspections) : insps;
-        await jbWrite({ properties: props, inspections: merged, targets: tgts });
-        setSyncStatus('ok');
-      } catch { setSyncStatus('error'); }
-      finally { pendingWrite.current = false; }
-    }, 1500);
-  }, [mergeInspections]);
+  // Per-apartment writes — only changed apartments, no more full-state overwrite
+  const prevInspRef = useRef(null);
+  useEffect(() => {
+    safeSave(STORAGE_KEYS.inspections, inspections);
+    inspectionsRef.current = inspections;
 
-  // Persist locally + push to cloud on change
-  useEffect(() => { safeSave(STORAGE_KEYS.properties, properties); }, [properties]);
-  useEffect(() => { safeSave(STORAGE_KEYS.inspections, inspections); inspectionsRef.current = inspections; }, [inspections]);
-  useEffect(() => { safeSave(STORAGE_KEYS.targets, targets); }, [targets]);
-  useEffect(() => { scheduleWrite(properties, inspections, targets); }, [properties, inspections, targets, scheduleWrite]);
+    if (fromRemote.current || !hasLoadedOnce.current) {
+      prevInspRef.current = inspections;
+      return;
+    }
+    const prev = prevInspRef.current || {};
+    const changed = Object.keys(inspections).filter(
+      id => inspections[id]?.updatedAt !== prev[id]?.updatedAt
+    );
+    prevInspRef.current = inspections;
+    if (changed.length === 0) return;
+    setSyncStatus('syncing');
+    Promise.all(changed.map(id => db.ref(`inspections/${id}`).set(inspections[id])))
+      .then(() => setSyncStatus('ok'))
+      .catch(() => setSyncStatus('error'));
+  }, [inspections]);
+
+  useEffect(() => {
+    safeSave(STORAGE_KEYS.properties, properties);
+    if (!hasLoadedOnce.current) return;
+    db.ref('properties').set(properties).catch(() => {});
+  }, [properties]);
+
+  useEffect(() => {
+    safeSave(STORAGE_KEYS.targets, targets);
+    if (!hasLoadedOnce.current) return;
+    db.ref('targets').set(targets).catch(() => {});
+  }, [targets]);
 
   const setInspection = useCallback((id, ins) => {
     setInspections(prev => ({ ...prev, [id]: ins }));
