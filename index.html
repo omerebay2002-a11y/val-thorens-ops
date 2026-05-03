@@ -913,6 +913,7 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             </button>
           </div>
 
+          {/* כמה יש */}
           <div className="mt-4 flex items-center justify-between gap-3 bg-ice-500/10 border border-ice-400/30 rounded-2xl px-4 py-3">
             <span className="text-sm font-bold text-ice-100">כמה יש?</span>
             <div className="flex items-center gap-2">
@@ -926,6 +927,25 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
             </div>
             <span className="text-[11px] text-ice-100/50">יחידות</span>
           </div>
+
+          {/* כמה חסר — linked: missing = required - have */}
+          {requiredCount > 0 && (() => {
+            const missing = Math.max(0, requiredCount - have);
+            const setMissing = (n) => setHave(Math.max(0, requiredCount - n));
+            return (
+              <div className="mt-2 flex items-center justify-between gap-3 bg-rose-500/10 border border-rose-400/30 rounded-2xl px-4 py-3">
+                <span className="text-sm font-bold text-rose-200">כמה חסר?</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setMissing(missing - 1)}
+                    className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">−</button>
+                  <span className="display text-3xl text-rose-100 min-w-[3ch] w-16 text-center tabular-nums">{missing}</span>
+                  <button type="button" onClick={() => setMissing(missing + 1)}
+                    className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/40 text-rose-100 text-xl font-bold hover:bg-rose-500/25 active:scale-90 flex items-center justify-center">+</button>
+                </div>
+                <span className="text-[11px] text-rose-200/50">מתוך {requiredCount}</span>
+              </div>
+            );
+          })()}
 
           <textarea
             rows={2}
