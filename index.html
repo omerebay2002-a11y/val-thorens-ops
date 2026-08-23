@@ -599,6 +599,69 @@ const CATEGORY_META = {
   bathroom: { label: "אמבטיה", accent: "purple" },
   general: { label: "כללי", accent: "emerald" }
 };
+const IKEA_DEPARTMENTS = {
+  // kitchen — tableware
+  knives: "כלי אוכל",
+  forks: "כלי אוכל",
+  spoons: "כלי אוכל",
+  smallSpoons: "כלי אוכל",
+  plates: "כלי אוכל",
+  bowls: "כלי אוכל",
+  glasses: "כלי אוכל",
+  wineGlasses: "כלי אוכל",
+  coffeeMugs: "כלי אוכל",
+  // kitchen — cooking tools & small electricals
+  kettle: "מטבח קטן",
+  pans: "כלי בישול",
+  pots: "כלי בישול",
+  chefKnife: "כלי בישול",
+  cuttingBoard: "כלי בישול",
+  cookingSpoons: "כלי בישול",
+  strainer: "כלי בישול",
+  opener: "כלי בישול",
+  peeler: "כלי בישול",
+  potHolders: "טקסטיל מטבח",
+  trashBin: "אחסון ומיחזור",
+  // dining & living
+  diningTable: "רהיטים",
+  chairs: "רהיטים",
+  sofa: "רהיטים",
+  coffeeTable: "רהיטים",
+  lights: "תאורה",
+  // bathroom
+  showerScreen: "אמבטיה",
+  mirror: "אמבטיה",
+  hairDryer: "אמבטיה",
+  soapDispenser: "אמבטיה",
+  // bedroom & general
+  mattresses: "חדר שינה",
+  pillows: "טקסטיל",
+  pillowCases: "טקסטיל",
+  blankets: "טקסטיל",
+  sheets: "טקסטיל",
+  wardrobe: "אחסון ורהיטים",
+  hangers: "אחסון",
+  bedsideLamp: "תאורה",
+  bulbs: "תאורה",
+  curtains: "טקסטיל",
+  vacuum: "ניקיון"
+};
+const computeIkeaList = (aggregate) => {
+  const byDept = {};
+  const excluded = [];
+  aggregate.forEach((row) => {
+    const dept = IKEA_DEPARTMENTS[row.itemKey];
+    if (!dept) {
+      excluded.push(row.label);
+      return;
+    }
+    if (!byDept[dept]) byDept[dept] = { dept, items: [], totalQty: 0 };
+    byDept[dept].items.push(row);
+    byDept[dept].totalQty += row.totalQty;
+  });
+  const departments = Object.values(byDept).sort((a, b) => b.totalQty - a.totalQty || a.dept.localeCompare(b.dept, "he"));
+  return { departments, excluded };
+};
 const computePropertyShortages = (property, inspection, targets) => {
   if (!inspection) return [];
   const out = [];
@@ -2887,6 +2950,7 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
   const [groupBy, setGroupBy] = useState("item");
   const aggregate = useMemo(() => computeAggregateShortages(properties, inspections, targets), [properties, inspections, targets]);
   const byProperty = useMemo(() => properties.map((p) => ({ property: p, list: computePropertyShortages(p, inspections[p.id], targets) })).filter((x) => x.list.length > 0), [properties, inspections, targets]);
+  const ikea = useMemo(() => computeIkeaList(aggregate), [aggregate]);
   const totalQty = aggregate.reduce((s, a) => s + a.totalQty, 0);
   const totalLines = aggregate.length;
   const printList = () => window.print();
@@ -2901,6 +2965,19 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
           lines.push(`    - ${b.propertyName}: ${b.qty || (b.status === "partial" ? "חלקי" : "חסר")}${note}`);
         });
       });
+    } else if (groupBy === "ikea") {
+      lines[0] = "רשימת קניות לאיקאה – Val Thorens";
+      ikea.departments.forEach(({ dept, items, totalQty: deptQty }) => {
+        lines.push(`◆ ${dept} (${deptQty} יח׳)`);
+        items.forEach((row) => {
+          lines.push(`    • ${row.label} — ${row.totalQty > 0 ? `${row.totalQty} יח׳` : "לבדוק"}`);
+        });
+        lines.push("");
+      });
+      if (ikea.excluded.length) {
+        lines.push("לא נמכר באיקאה (לקנות במקום אחר):");
+        ikea.excluded.forEach((label) => lines.push(`    • ${label}`));
+      }
     } else {
       byProperty.forEach(({ property, list }) => {
         lines.push(`◆ ${property.name} (תפוסה ${property.capacity})`);
@@ -2944,6 +3021,14 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
       className: `px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupBy === "property" ? "bg-copper-500 text-white" : "text-ice-100/60 hover:bg-white/[0.05]"}`
     },
     "לפי דירה"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      onClick: () => setGroupBy("ikea"),
+      className: `px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupBy === "ikea" ? "bg-copper-500 text-white" : "text-ice-100/60 hover:bg-white/[0.05]"}`
+    },
+    "לאיקאה"
   )), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1" }, /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -2966,7 +3051,7 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
     const meta = CATEGORY_META[row.category] || { label: row.category, accent: "slate" };
     const tone = ROOM_ACCENT[meta.accent === "orange" ? "copper" : meta.accent] || ROOM_ACCENT.copper;
     return /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: `shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${tone.bg} border ${tone.ring}` }, /* @__PURE__ */ React.createElement("span", { className: "text-[9px] leading-none text-ice-100/70" }, "לקנות"), /* @__PURE__ */ React.createElement("span", { className: `display text-xl leading-tight ${tone.text}` }, row.totalQty || "·")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-ice-50 truncate" }, row.label), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 text-xs text-ice-100/50 mt-0.5" }, /* @__PURE__ */ React.createElement("span", { className: `px-1.5 py-0.5 rounded ${tone.bg} ${tone.text} border ${tone.ring}` }, meta.label), /* @__PURE__ */ React.createElement("span", null, row.breakdown.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "border-t border-white/5 bg-night-950/30 px-3 py-2 space-y-1" }, row.breakdown.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-start gap-2 text-sm text-ice-100/80" }, /* @__PURE__ */ React.createElement("span", { className: `shrink-0 mt-1.5 w-2 h-2 rounded-full ${b.status === "missing" ? "bg-rose-400" : "bg-amber-400"}` }), /* @__PURE__ */ React.createElement("span", { className: "font-semibold truncate" }, b.propertyName), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 text-ice-100/30" }, "·"), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold ${b.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, b.qty > 0 ? `${b.qty} יח׳` : b.status === "partial" ? "חלקי" : "חסר"), b.note && /* @__PURE__ */ React.createElement("span", { className: "text-ice-100/50 text-xs truncate" }, "[", b.note, "]")))));
-  })) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, byProperty.map(({ property, list }) => {
+  })) : groupBy === "ikea" ? /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, ikea.departments.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-6 text-center text-sm text-ice-100/60" }, "אין פריטים חסרים שנמכרים באיקאה כרגע."), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, ikea.departments.map(({ dept, items, totalQty: deptQty }) => /* @__PURE__ */ React.createElement("div", { key: dept, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-sky-400/15 border border-sky-400/30 text-sky-300 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(IconCart, { size: 18 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display font-bold text-ice-50 truncate" }, dept), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50" }, items.length, " פריטים")), /* @__PURE__ */ React.createElement("div", { className: "shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold" }, deptQty, " יח׳")), /* @__PURE__ */ React.createElement("div", { className: "p-2 space-y-1" }, items.map((row) => /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-ice-100 flex-1 truncate" }, row.label), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 font-bold text-rose-300" }, row.totalQty > 0 ? `${row.totalQty} יח׳` : "לבדוק"))))))), ikea.excluded.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-amber-400/20 p-3 text-sm text-ice-100/60" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-amber-300" }, "לא נמכר באיקאה: "), ikea.excluded.join(", "))) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, byProperty.map(({ property, list }) => {
     const total = list.reduce((s, x) => s + x.qty, 0);
     return /* @__PURE__ */ React.createElement("div", { key: property.id, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-copper-500/15 border border-copper-500/30 text-copper-300 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(IconHome, { size: 18 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display font-bold text-ice-50 truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50" }, "תפוסה ", property.capacity, " · ", list.length, " פריטים")), /* @__PURE__ */ React.createElement("div", { className: "shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold" }, total, " יח׳")), /* @__PURE__ */ React.createElement("div", { className: "p-2 space-y-1" }, list.map((it, i) => {
       const meta = CATEGORY_META[it.category] || { label: it.category, accent: "slate" };
