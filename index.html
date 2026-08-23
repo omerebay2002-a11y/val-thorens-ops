@@ -318,17 +318,12 @@ const GENERAL_ITEMS = [
   { key: "keys", label: "מפתחות / שלט", emoji: "🔑" },
   { key: "vacuum", label: "שואב אבק", emoji: "🧹" }
 ];
-const KITCHEN_KEYS = /* @__PURE__ */ new Set([
-  ...KITCHEN_MULTIPLIERS.map((i) => i.key),
-  ...KITCHEN_FIXED.map((i) => i.key)
-]);
 const targetKey = (category, key) => `${category}:${key}`;
 const getItemRequired = (item, capacity, category, targets) => {
   const override = targets && targets[targetKey(category, item.key)];
   if (override && override.perPerson) {
     return { required: capacity * override.perPerson, isCountable: true };
   }
-  if (KITCHEN_KEYS.has(item.key)) return { required: 1, isCountable: false };
   if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
   if (item.count && item.count > 1) return { required: item.count, isCountable: true };
   return { required: 1, isCountable: false };
