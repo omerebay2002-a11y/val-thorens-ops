@@ -2947,11 +2947,42 @@ const TargetsCalculator = ({ targets, setTargets }) => {
     ));
   }))));
 };
-const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
+const ShoppingView = ({ properties, inspections, setInspections, targets, setTargets }) => {
   const [groupBy, setGroupBy] = useState("item");
   const aggregate = useMemo(() => computeAggregateShortages(properties, inspections, targets), [properties, inspections, targets]);
   const byProperty = useMemo(() => properties.map((p) => ({ property: p, list: computePropertyShortages(p, inspections[p.id], targets) })).filter((x) => x.list.length > 0), [properties, inspections, targets]);
   const ikea = useMemo(() => computeIkeaList(aggregate), [aggregate]);
+  const [pending, setPending] = useState({});
+  const markResolved = useCallback((propertyId, category, itemKey) => {
+    setInspections((prev) => {
+      var _a, _b;
+      const current = prev[propertyId] || createBlankInspection();
+      return {
+        ...prev,
+        [propertyId]: {
+          ...current,
+          [category]: {
+            ...current[category],
+            [itemKey]: { status: "ok", note: ((_b = (_a = current[category]) == null ? void 0 : _a[itemKey]) == null ? void 0 : _b.note) || "", presentCount: null, missingCount: null }
+          },
+          updatedAt: Date.now()
+        }
+      };
+    });
+  }, [setInspections]);
+  const toggleRow = (propertyId, category, itemKey) => {
+    const rowKey = `${category}:${itemKey}:${propertyId}`;
+    if (pending[rowKey]) return;
+    setPending((p) => ({ ...p, [rowKey]: true }));
+    setTimeout(() => {
+      markResolved(propertyId, category, itemKey);
+      setPending((p) => {
+        const n = { ...p };
+        delete n[rowKey];
+        return n;
+      });
+    }, 380);
+  };
   const totalQty = aggregate.reduce((s, a) => s + a.totalQty, 0);
   const totalLines = aggregate.length;
   const printList = () => window.print();
@@ -3022,7 +3053,7 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
   if (aggregate.length === 0) {
     return /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 space-y-3 anim-fade-in" }, /* @__PURE__ */ React.createElement(TargetsCalculator, { targets, setTargets }), /* @__PURE__ */ React.createElement("div", { className: "text-center pt-6" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-3xl glass-strong border border-emerald-400/30 p-8" }, /* @__PURE__ */ React.createElement("div", { className: "w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center mx-auto mb-3 anim-ember" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 36 })), /* @__PURE__ */ React.createElement("h3", { className: "display text-2xl text-ice-50" }, "אין כלום לקנות"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-ice-100/50 mt-2" }, "קבע יעד במחשבון ונראה כמה חסר בפועל."))));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 space-y-3 anim-fade-in" }, /* @__PURE__ */ React.createElement(TargetsCalculator, { targets, setTargets }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 stagger" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-white/10 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-ice-50" }, totalLines), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-ice-100/50 mt-0.5" }, "פריטים")), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-rose-400/30 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-rose-300" }, totalQty), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-rose-200/70 mt-0.5" }, `סה"כ יח'`)), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-amber-400/30 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-amber-300" }, byProperty.length), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-amber-200/70 mt-0.5" }, "דירות"))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 p-1 glass rounded-xl border border-white/10" }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 space-y-3 anim-fade-in" }, /* @__PURE__ */ React.createElement(TargetsCalculator, { targets, setTargets }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 stagger" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-white/10 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-ice-50" }, totalLines), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-ice-100/50 mt-0.5" }, "פריטים")), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-rose-400/30 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-rose-300" }, totalQty), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-rose-200/70 mt-0.5" }, `סה"כ יח'`)), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-amber-400/30 p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-amber-300" }, byProperty.length), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-amber-200/70 mt-0.5" }, "דירות"))), (groupBy === "item" || groupBy === "property") && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-ice-100/40 leading-relaxed -mb-1" }, "☑ סימון ליד דירה מעדכן את הבדיקה שלה לתקין — הרשימה כאן והבדיקות בכל דירה הן אותו מידע."), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 p-1 glass rounded-xl border border-white/10" }, /* @__PURE__ */ React.createElement(
     "button",
     {
       type: "button",
@@ -3076,13 +3107,39 @@ const ShoppingView = ({ properties, inspections, targets, setTargets }) => {
   ))), groupBy === "item" ? /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, aggregate.map((row) => {
     const meta = CATEGORY_META[row.category] || { label: row.category, accent: "slate" };
     const tone = ROOM_ACCENT[meta.accent === "orange" ? "copper" : meta.accent] || ROOM_ACCENT.copper;
-    return /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: `shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${tone.bg} border ${tone.ring}` }, /* @__PURE__ */ React.createElement("span", { className: "text-[9px] leading-none text-ice-100/70" }, "לקנות"), /* @__PURE__ */ React.createElement("span", { className: `display text-xl leading-tight ${tone.text}` }, row.totalQty || "·")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-ice-50 truncate" }, row.label), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 text-xs text-ice-100/50 mt-0.5" }, /* @__PURE__ */ React.createElement("span", { className: `px-1.5 py-0.5 rounded ${tone.bg} ${tone.text} border ${tone.ring}` }, meta.label), /* @__PURE__ */ React.createElement("span", null, row.breakdown.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "border-t border-white/5 bg-night-950/30 px-3 py-2 space-y-1" }, row.breakdown.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-start gap-2 text-sm text-ice-100/80" }, /* @__PURE__ */ React.createElement("span", { className: `shrink-0 mt-1.5 w-2 h-2 rounded-full ${b.status === "missing" ? "bg-rose-400" : "bg-amber-400"}` }), /* @__PURE__ */ React.createElement("span", { className: "font-semibold truncate" }, b.propertyName), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 text-ice-100/30" }, "·"), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold ${b.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, b.qty > 0 ? `${b.qty} יח׳` : b.status === "partial" ? "חלקי" : "חסר"), b.note && /* @__PURE__ */ React.createElement("span", { className: "text-ice-100/50 text-xs truncate" }, "[", b.note, "]")))));
+    return /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: `shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${tone.bg} border ${tone.ring}` }, /* @__PURE__ */ React.createElement("span", { className: "text-[9px] leading-none text-ice-100/70" }, "לקנות"), /* @__PURE__ */ React.createElement("span", { className: `display text-xl leading-tight ${tone.text}` }, row.totalQty || "·")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-ice-50 truncate" }, row.label), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 text-xs text-ice-100/50 mt-0.5" }, /* @__PURE__ */ React.createElement("span", { className: `px-1.5 py-0.5 rounded ${tone.bg} ${tone.text} border ${tone.ring}` }, meta.label), /* @__PURE__ */ React.createElement("span", null, row.breakdown.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "border-t border-white/5 bg-night-950/30 px-3 py-2 space-y-1" }, row.breakdown.map((b, i) => {
+      const rowKey = `${row.category}:${row.itemKey}:${b.propertyId}`;
+      const done = !!pending[rowKey];
+      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-start gap-2 text-sm" }, /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          disabled: done,
+          onClick: () => toggleRow(b.propertyId, row.category, row.itemKey),
+          "aria-label": `סמן כהושלם עבור ${b.propertyName}`,
+          className: `shrink-0 mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition ${done ? "bg-emerald-400 border-emerald-400" : "border-white/25 hover:border-emerald-400/60 active:scale-90"}`
+        },
+        done && /* @__PURE__ */ React.createElement(IconCheck, { size: 12, strokeWidth: 3, className: "text-night-950" })
+      ), /* @__PURE__ */ React.createElement("span", { className: `font-semibold truncate transition ${done ? "text-ice-100/40 line-through" : "text-ice-100/80"}` }, b.propertyName), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 text-ice-100/30" }, "·"), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold transition ${done ? "text-emerald-400/70 line-through" : b.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, b.qty > 0 ? `${b.qty} יח׳` : b.status === "partial" ? "חלקי" : "חסר"), b.note && !done && /* @__PURE__ */ React.createElement("span", { className: "text-ice-100/50 text-xs truncate" }, "[", b.note, "]"));
+    })));
   })) : groupBy === "ikea" ? /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, ikea.departments.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-6 text-center text-sm text-ice-100/60" }, "אין פריטים חסרים שנמכרים באיקאה כרגע."), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, ikea.departments.map(({ dept, items, totalQty: deptQty }) => /* @__PURE__ */ React.createElement("div", { key: dept, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-sky-400/15 border border-sky-400/30 text-sky-300 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(IconCart, { size: 18 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display font-bold text-ice-50 truncate" }, dept), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50" }, items.length, " פריטים")), /* @__PURE__ */ React.createElement("div", { className: "shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold" }, deptQty, " יח׳")), /* @__PURE__ */ React.createElement("div", { className: "p-2 space-y-1" }, items.map((row) => /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-ice-100 flex-1 truncate" }, row.label), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 font-bold text-rose-300" }, row.totalQty > 0 ? `${row.totalQty} יח׳` : "לבדוק"))))))), ikea.excluded.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-amber-400/20 p-3 text-sm text-ice-100/60" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-amber-300" }, "לא נמכר באיקאה: "), ikea.excluded.join(", "))) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, byProperty.map(({ property, list }) => {
     const total = list.reduce((s, x) => s + x.qty, 0);
     return /* @__PURE__ */ React.createElement("div", { key: property.id, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-copper-500/15 border border-copper-500/30 text-copper-300 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(IconHome, { size: 18 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display font-bold text-ice-50 truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50" }, "תפוסה ", property.capacity, " · ", list.length, " פריטים")), /* @__PURE__ */ React.createElement("div", { className: "shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold" }, total, " יח׳")), /* @__PURE__ */ React.createElement("div", { className: "p-2 space-y-1" }, list.map((it, i) => {
       const meta = CATEGORY_META[it.category] || { label: it.category, accent: "slate" };
       const tone = ROOM_ACCENT[meta.accent === "orange" ? "copper" : meta.accent] || ROOM_ACCENT.copper;
-      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement("span", { className: `shrink-0 px-1.5 py-0.5 text-[10px] rounded ${tone.bg} ${tone.text} border ${tone.ring} font-semibold` }, meta.label), /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-ice-100 flex-1 truncate" }, it.label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold ${it.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, it.qty > 0 ? `${it.qty} יח׳` : it.status === "partial" ? "חלקי" : "חסר"), it.note && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-ice-100/50 truncate hidden sm:inline" }, "[", it.note, "]"));
+      const rowKey = `${it.category}:${it.key}:${property.id}`;
+      const done = !!pending[rowKey];
+      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          disabled: done,
+          onClick: () => toggleRow(property.id, it.category, it.key),
+          "aria-label": `סמן כהושלם: ${it.label}`,
+          className: `shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition ${done ? "bg-emerald-400 border-emerald-400" : "border-white/25 hover:border-emerald-400/60 active:scale-90"}`
+        },
+        done && /* @__PURE__ */ React.createElement(IconCheck, { size: 12, strokeWidth: 3, className: "text-night-950" })
+      ), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 px-1.5 py-0.5 text-[10px] rounded ${tone.bg} ${tone.text} border ${tone.ring} font-semibold` }, meta.label), /* @__PURE__ */ React.createElement("span", { className: `font-semibold flex-1 truncate transition ${done ? "text-ice-100/40 line-through" : "text-ice-100"}` }, it.label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold transition ${done ? "text-emerald-400/70 line-through" : it.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, it.qty > 0 ? `${it.qty} יח׳` : it.status === "partial" ? "חלקי" : "חסר"), it.note && !done && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-ice-100/50 truncate hidden sm:inline" }, "[", it.note, "]"));
     })));
   })));
 };
@@ -3402,7 +3459,7 @@ const App = () => {
       roomKey: selectedRoom,
       onChange: handleInspectionChange
     }
-  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties, inspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
+  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
 };
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(/* @__PURE__ */ React.createElement(App, null));
