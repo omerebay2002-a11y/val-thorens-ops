@@ -658,6 +658,64 @@ const computeIkeaList = (aggregate) => {
   const departments = Object.values(byDept).sort((a, b) => b.totalQty - a.totalQty || a.dept.localeCompare(b.dept, "he"));
   return { departments, excluded };
 };
+
+const EN_LABELS = {
+  "סכיני אוכל": "Knives", "מזלגות": "Forks", "כפות": "Spoons", "כפיות": "Teaspoons", "צלחות": "Plates", "קערות": "Bowls",
+  "כוסות שתייה": "Drinking glasses", "כוסות יין": "Wine glasses", "כוסות קפה": "Coffee mugs",
+  "מקרר": "Fridge", "תנור": "Oven", "כיריים": "Stove", "מיקרוגל": "Microwave", "מדיח כלים": "Dishwasher", "קומקום": "Kettle",
+  "מחבתות": "Frying pans", "סירים": "Pots", "סכין שף לחיתוך": "Chef knife", "קרש חיתוך": "Cutting board", "כפות בישול": "Cooking utensils",
+  "מסננת": "Strainer", "פותחן/חולץ": "Can / bottle opener", "תרבדים": "Pot holders", "קולפן": "Peeler", "פח אשפה": "Trash bin",
+  "שולחן אוכל": "Dining table", "כיסאות": "Chairs", "ספה": "Sofa", "שולחן קפה": "Coffee table", "טלוויזיה": "TV", "שלט טלוויזיה": "TV remote", "תאורת אוכל": "Dining lights",
+  "מקלחת": "Shower", "מסך/וילון מקלחת": "Shower screen / curtain", "אסלה": "Toilet", "כיור": "Sink", "מראה": "Mirror", "מייבש שיער": "Hair dryer",
+  "איוורור": "Ventilation", "מתקן סבון": "Soap dispenser",
+  "מזרנים": "Mattresses", "כריות": "Pillows", "כיסויי כריות": "Pillowcases", "שמיכות": "Blankets", "סדינים": "Sheets", "ארון בגדים": "Wardrobe",
+  "קולבים": "Hangers", "מנורות שידה": "Bedside lamps", "חימום": "Heating", "נורות": "Light bulbs", "וילונות": "Curtains", "מפתחות / שלט": "Keys / remote", "שואב אבק": "Vacuum cleaner"
+};
+const EN_DEPTS = {
+  "כלי אוכל": "Tableware", "מטבח קטן": "Small kitchen appliances", "כלי בישול": "Cooking tools", "טקסטיל מטבח": "Kitchen textiles",
+  "אחסון ומיחזור": "Storage and recycling", "רהיטים": "Furniture", "תאורה": "Lighting", "אמבטיה": "Bathroom", "חדר שינה": "Bedroom",
+  "טקסטיל": "Textiles", "אחסון ורהיטים": "Storage and furniture", "אחסון": "Storage"
+};
+const EN_CATEGORIES = { kitchen: "Kitchen", dining: "Living / dining", bathroom: "Bathroom", general: "General" };
+const trLabel = (lang, label) => lang === "en" ? (EN_LABELS[label] || label) : label;
+const trDept = (lang, dept) => lang === "en" ? (EN_DEPTS[dept] || dept) : dept;
+const diffPaths = (a, b, base, out) => {
+  const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+  if (isObj(a) && isObj(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    keys.forEach((k) => {
+      if (!(k in b)) out[base + "/" + k] = null;
+      else diffPaths(a[k], b[k], base + "/" + k, out);
+    });
+  } else if (JSON.stringify(a) !== JSON.stringify(b)) {
+    out[base] = b === undefined ? null : b;
+  }
+};
+const shareText = async (title, text) => {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text });
+    } catch (e) {
+      if ((e == null ? void 0 : e.name) !== "AbortError") alert("השיתוף נכשל.");
+    }
+  } else {
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  }
+};
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Copied / הועתק");
+  } catch {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "list-" + new Date().toISOString().slice(0, 10) + ".txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+};
 const computePropertyShortages = (property, inspection, targets) => {
   if (!inspection) return [];
   const out = [];
@@ -757,6 +815,7 @@ const uploadToCloudinary = async (blob) => {
   const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`, { method: "POST", body: fd });
   if (!r.ok) throw new Error("cloudinary " + r.status);
   const j = await r.json();
+  if (typeof j.secure_url !== "string" || !j.secure_url.startsWith("https://")) throw new Error("cloudinary: no url in response");
   return j.secure_url;
 };
 const compressImage = async (file) => {
@@ -2341,7 +2400,7 @@ const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
     }
   )), sheet);
 };
-const normalizePhotos = (photos) => (photos || []).map((p) => typeof p === "string" ? { src: p, note: "" } : p && typeof p === "object" ? { src: p.src || "", note: p.note || "" } : null).filter(Boolean);
+const normalizePhotos = (photos) => (photos || []).map((p) => typeof p === "string" ? { src: p, note: "" } : p && typeof p === "object" ? { src: p.src || "", note: p.note || "" } : null).filter((p) => p && p.src);
 const MaintenancePanel = ({ inspection, onChange }) => {
   const fileInputRef = useRef(null);
   const update = (m) => onChange({ ...inspection, maintenance: m, updatedAt: Date.now() });
@@ -2942,8 +3001,73 @@ const TargetsCalculator = ({ targets, setTargets }) => {
     ));
   }))));
 };
+
+const MaintenanceView = ({ properties, inspections, setInspections }) => {
+  const [lang, setLang] = useState("en");
+  const h = React.createElement;
+  const rows = useMemo(() => {
+    const out = [];
+    properties.forEach((p) => {
+      const insp = inspections[p.id];
+      if (!insp) return;
+      const m = insp.maintenance || {};
+      const reno = (m.renovations || "").trim();
+      const realReno = reno && !/^(אין|כלום)$/.test(reno) ? reno : "";
+      const notes = [];
+      ["kitchen", "dining", "bathroom", "general"].forEach((cat) => {
+        const defs = ALL_ITEMS_BY_CATEGORY[cat] || [];
+        Object.entries(insp[cat] || {}).forEach(([key, it]) => {
+          const note = (it && it.note || "").trim();
+          if (!note) return;
+          const def = defs.find((d) => d.key === key);
+          notes.push({ label: def ? def.label : key, note });
+        });
+      });
+      const photos = normalizePhotos(m.photos).length;
+      if (realReno || notes.length || photos) out.push({ property: p, reno: realReno, renoEn: (m.renovationsEn || "").trim(), notes, photos });
+    });
+    return out;
+  }, [properties, inspections]);
+  const setEn = (id, value) => setInspections((prev) => {
+    const current = prev[id] || createBlankInspection();
+    return { ...prev, [id]: { ...current, maintenance: { ...(current.maintenance || {}), renovationsEn: value }, updatedAt: Date.now() } };
+  });
+  const buildText = () => {
+    const en = lang === "en";
+    const lines = [en ? "*Val Thorens – Maintenance List*" : "*Val Thorens – רשימת תחזוקה*", ""];
+    rows.forEach((r) => {
+      const body = [];
+      const renoText = en && r.renoEn ? r.renoEn : r.reno;
+      renoText.split(/\n+/).map((x) => x.trim()).filter(Boolean).forEach((x) => body.push("• " + x));
+      r.notes.forEach((n) => body.push("• " + trLabel(lang, n.label) + ": " + n.note));
+      if (!body.length) return;
+      lines.push("*" + r.property.name + "*");
+      body.forEach((b) => lines.push(b));
+      lines.push("");
+    });
+    return lines.join("\n").trim();
+  };
+  const pill = "px-3 py-1.5 rounded-lg text-sm font-bold";
+  return h("div", { className: "px-4 py-4 space-y-3 anim-fade-in" },
+    h("div", { className: "flex flex-wrap gap-2 items-center justify-between" },
+      h("div", { className: "text-sm text-ice-100/70" }, rows.length + " דירות עם תקלות / הערות"),
+      h("div", { className: "flex gap-1" },
+        h("button", { type: "button", onClick: () => setLang(lang === "en" ? "he" : "en"), className: pill + " glass border border-white/10 text-ice-100", title: "שפת הרשימה / List language" }, lang === "en" ? "EN" : "עב"),
+        h("button", { type: "button", onClick: () => shareText(lang === "en" ? "Maintenance list" : "רשימת תחזוקה", buildText()), className: pill + " bg-copper-500 text-white" }, h(IconSend, { size: 14 }), " שלח"),
+        h("button", { type: "button", onClick: () => copyText(buildText()), className: pill + " glass border border-white/10 text-ice-100" }, h(IconCopy, { size: 14 }), " העתק"))),
+    rows.length === 0 && h("div", { className: "rounded-2xl glass border border-white/10 p-6 text-center text-sm text-ice-100/60" }, "לא נרשמו תקלות או הערות תחזוקה."),
+    rows.map((r) => h("div", { key: r.property.id, className: "rounded-2xl glass border border-white/10 p-3 space-y-2" },
+      h("div", { className: "font-bold text-ice-50" }, r.property.name),
+      r.reno && h("div", { className: "text-sm text-ice-100 whitespace-pre-line" }, r.reno),
+      r.notes.map((n, i) => h("div", { key: i, className: "text-sm text-ice-100/80" }, h("span", { className: "text-ice-100/50" }, n.label + ": "), n.note)),
+      r.photos > 0 && h("div", { className: "text-xs text-ice-100/50" }, r.photos + " תמונות"),
+      r.reno && h("input", { type: "text", dir: "ltr", value: r.renoEn, onChange: (e) => setEn(r.property.id, e.target.value), placeholder: "English version for the export (optional)", className: "w-full px-3 py-2 rounded-lg bg-night-950/40 border border-white/10 text-sm text-ice-50 outline-none" })
+    ))
+  );
+};
 const ShoppingView = ({ properties, inspections, setInspections, targets, setTargets }) => {
   const [groupBy, setGroupBy] = useState("item");
+  const [lang, setLang] = useState("he");
   const aggregate = useMemo(() => computeAggregateShortages(properties, inspections, targets), [properties, inspections, targets]);
   const byProperty = useMemo(() => properties.map((p) => ({ property: p, list: computePropertyShortages(p, inspections[p.id], targets) })).filter((x) => x.list.length > 0), [properties, inspections, targets]);
   const ikea = useMemo(() => computeIkeaList(aggregate), [aggregate]);
@@ -2982,35 +3106,41 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
   const totalLines = aggregate.length;
   const printList = () => window.print();
   const buildListText = () => {
-    const lines = ["רשימת קניות – Val Thorens", `נוצר: ${(/* @__PURE__ */ new Date()).toLocaleString("he-IL")}`, ""];
+    const en = lang === "en";
+    const L = (x) => trLabel(lang, x);
+    const U = en ? "pcs" : "יח׳";
+    const CHECK = en ? "check" : "לבדוק";
+    const PARTIAL = en ? "partial" : "חלקי";
+    const MISSING = en ? "missing" : "חסר";
+    const lines = [en ? "*Val Thorens – Shopping List*" : "רשימת קניות – Val Thorens", (en ? "Created: " : "נוצר: ") + (/* @__PURE__ */ new Date()).toLocaleString(en ? "en-GB" : "he-IL"), ""];
     if (groupBy === "item") {
       aggregate.forEach((row) => {
-        if (row.totalQty > 0) lines.push(`• ${row.label} — ${row.totalQty} יח׳`);
-        else lines.push(`• ${row.label} — לבדוק`);
+        if (row.totalQty > 0) lines.push(`• ${L(row.label)} — ${row.totalQty} ${U}`);
+        else lines.push(`• ${L(row.label)} — ${CHECK}`);
         row.breakdown.forEach((b) => {
           const note = b.note ? ` [${b.note}]` : "";
-          lines.push(`    - ${b.propertyName}: ${b.qty || (b.status === "partial" ? "חלקי" : "חסר")}${note}`);
+          lines.push(`    - ${b.propertyName}: ${b.qty || (b.status === "partial" ? PARTIAL : MISSING)}${note}`);
         });
       });
     } else if (groupBy === "ikea") {
-      lines[0] = "רשימת קניות לאיקאה – Val Thorens";
+      lines[0] = en ? "*Val Thorens – IKEA Shopping List*" : "רשימת קניות לאיקאה – Val Thorens";
       ikea.departments.forEach(({ dept, items, totalQty: deptQty }) => {
-        lines.push(`◆ ${dept} (${deptQty} יח׳)`);
+        lines.push(`◆ ${trDept(lang, dept)} (${deptQty} ${U})`);
         items.forEach((row) => {
-          lines.push(`    • ${row.label} — ${row.totalQty > 0 ? `${row.totalQty} יח׳` : "לבדוק"}`);
+          lines.push(`    • ${L(row.label)} — ${row.totalQty > 0 ? `${row.totalQty} ${U}` : CHECK}`);
         });
         lines.push("");
       });
       if (ikea.excluded.length) {
-        lines.push("לא נמכר באיקאה (לקנות במקום אחר):");
-        ikea.excluded.forEach((label) => lines.push(`    • ${label}`));
+        lines.push(en ? "Not sold at IKEA (buy elsewhere):" : "לא נמכר באיקאה (לקנות במקום אחר):");
+        ikea.excluded.forEach((label) => lines.push(`    • ${L(label)}`));
       }
     } else {
       byProperty.forEach(({ property, list }) => {
-        lines.push(`◆ ${property.name} (תפוסה ${property.capacity})`);
+        lines.push(`◆ *${property.name}* (${en ? "capacity" : "תפוסה"} ${property.capacity})`);
         list.forEach((it) => {
           const note = it.note ? ` [${it.note}]` : "";
-          lines.push(`    • ${it.label}: ${it.qty > 0 ? it.qty : it.status === "partial" ? "חלקי" : "חסר"}${note}`);
+          lines.push(`    • ${L(it.label)}: ${it.qty > 0 ? it.qty : it.status === "partial" ? PARTIAL : MISSING}${note}`);
         });
         lines.push("");
       });
@@ -3034,7 +3164,7 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
   };
   const shareList = async () => {
     const text = buildListText();
-    const title = groupBy === "ikea" ? "רשימת קניות לאיקאה" : "רשימת קניות";
+    const title = lang === "en" ? (groupBy === "ikea" ? "IKEA shopping list" : "Shopping list") : (groupBy === "ikea" ? "רשימת קניות לאיקאה" : "רשימת קניות");
     if (navigator.share) {
       try {
         await navigator.share({ title, text });
@@ -3072,7 +3202,7 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
       className: `px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupBy === "ikea" ? "bg-copper-500 text-white" : "text-ice-100/60 hover:bg-white/[0.05]"}`
     },
     "לאיקאה"
-  )), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1" }, /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1" }, /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => setLang(lang === "en" ? "he" : "en"), className: "px-3 py-1.5 rounded-lg glass border border-white/10 text-ice-100 text-sm font-bold hover:bg-white/[0.06]", title: "שפת הרשימה / List language" }, lang === "en" ? "EN" : "עב"), /* @__PURE__ */ React.createElement(
     "button",
     {
       type: "button",
@@ -3281,7 +3411,15 @@ const App = () => {
     prevInspRef.current = inspections;
     if (changed.length === 0) return;
     setSyncStatus("syncing");
-    Promise.all(changed.map((id) => db.ref(`inspections/${id}`).set(inspections[id]))).then(() => setSyncStatus("ok")).catch(() => setSyncStatus("error"));
+    const updates = {};
+    changed.forEach((id) => {
+      const before = prev[id] ? JSON.parse(JSON.stringify(prev[id])) : null;
+      const after = inspections[id] ? JSON.parse(JSON.stringify(inspections[id])) : null;
+      if (!before || !after) updates[id] = after;
+      else diffPaths(before, after, id, updates);
+    });
+    if (Object.keys(updates).length === 0) return;
+    db.ref("inspections").update(updates).then(() => setSyncStatus("ok")).catch(() => setSyncStatus("error"));
   }, [inspections]);
   useEffect(() => {
     safeSave(STORAGE_KEYS.properties, properties);
@@ -3396,9 +3534,10 @@ const App = () => {
   ), /* @__PURE__ */ React.createElement("input", { ref: importInputRef, type: "file", accept: "application/json", onChange: importJSON, className: "hidden" }), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => setShowConnect(true), className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "התחבר לטלפון" }, /* @__PURE__ */ React.createElement(IconPhone, { size: 18 })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => {
     var _a;
     return (_a = importInputRef.current) == null ? void 0 : _a.click();
-  }, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייבוא JSON" }, /* @__PURE__ */ React.createElement(IconUpload, { size: 18 })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: exportJSON, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייצוא JSON" }, /* @__PURE__ */ React.createElement(IconDownload, { size: 18 })))), !selectedAptId && /* @__PURE__ */ React.createElement("div", { className: "mt-3 grid grid-cols-3 gap-1 p-1 bg-white/[0.04] border border-white/5 rounded-xl" }, [
+  }, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייבוא JSON" }, /* @__PURE__ */ React.createElement(IconUpload, { size: 18 })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: exportJSON, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייצוא JSON" }, /* @__PURE__ */ React.createElement(IconDownload, { size: 18 })))), !selectedAptId && /* @__PURE__ */ React.createElement("div", { className: "mt-3 grid grid-cols-4 gap-1 p-1 bg-white/[0.04] border border-white/5 rounded-xl" }, [
     { key: "inspect", label: "בדיקה", icon: /* @__PURE__ */ React.createElement(IconClipboard, { size: 14 }) },
     { key: "shopping", label: "קניות", icon: /* @__PURE__ */ React.createElement(IconCart, { size: 14 }) },
+    { key: "maintenance", label: "תחזוקה", icon: /* @__PURE__ */ React.createElement(IconWrench, { size: 14 }) },
     { key: "setup", label: "הגדרות", icon: /* @__PURE__ */ React.createElement(IconSettings, { size: 14 }) }
   ].map((t) => /* @__PURE__ */ React.createElement(
     "button",
@@ -3454,7 +3593,7 @@ const App = () => {
       roomKey: selectedRoom,
       onChange: handleInspectionChange
     }
-  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
+  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties, inspections, setInspections, targets, setTargets }), mode === "maintenance" && /* @__PURE__ */ React.createElement(MaintenanceView, { properties, inspections, setInspections }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
 };
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(/* @__PURE__ */ React.createElement(App, null));
