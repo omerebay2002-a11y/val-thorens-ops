@@ -221,14 +221,38 @@ const BUILDINGS = [
   { id: "arcelle", name: "Arcelle", short: "Arcelle", emoji: "🏠", area: "Place de Caron", accent: "rose" },
   { id: "lauzieres", name: "Lauzières", short: "Lauzières", emoji: "🏠", area: "Place de Caron", accent: "rose" }
 ];
+// Season 2026/27: 32 apartments (BOOKED from 01.11.2026 in ota_reservations).
+// Capacity: apartment_next_season_planning, else the app. The four marked capacityProvisional
+// have neither - capacity is the max adults seen in their bookings; verify in Setup.
+const SEASON_NEW_PROPERTIES = [
+  { id: "cusco-e10", name: "Cusco E10", building: "temple-soleil", capacity: 4, doubleBeds: 0, capacityProvisional: true },
+  { id: "cusco-f4", name: "Cusco F4", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "la-vanoise-154", name: "La Vanoise 154", building: "la-vanoise", capacity: 4, doubleBeds: 0, capacityProvisional: true },
+  { id: "lauzieres-003", name: "Lauzières 003", building: "lauzieres", capacity: 5, doubleBeds: 0, capacityProvisional: true },
+  { id: "lauzieres-521", name: "Lauzières 521", building: "lauzieres", capacity: 4, doubleBeds: 0, capacityProvisional: true },
+  { id: "machu-514", name: "Machu 514", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "pichu-705", name: "Pichu 705", building: "temple-soleil", capacity: 5, doubleBeds: 0 }
+];
+const SEASON_RETIRED_IDS = ["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6"];
+const SEASON_CAPACITY = { "cusco-k4": 5, "le-serac-j10": 4, "le-serac-k10": 7, "neves-194": 5 };
+// Saved lists (this device / Firebase) predate the season: drop retired apartments, add new ones, once.
+// Old inspections of retired apartments are not touched (they stay in Firebase).
+const applySeasonProperties = (list) => {
+  if (!Array.isArray(list)) return list;
+  const ids = new Set(list.map((p) => p.id));
+  const needs = list.some((p) => SEASON_RETIRED_IDS.includes(p.id)) || !SEASON_NEW_PROPERTIES.some((p) => ids.has(p.id));
+  if (!needs) return list;
+  const kept = list.filter((p) => !SEASON_RETIRED_IDS.includes(p.id)).map((p) => SEASON_CAPACITY[p.id] ? { ...p, capacity: SEASON_CAPACITY[p.id] } : p);
+  const have = new Set(kept.map((p) => p.id));
+  return [...kept, ...SEASON_NEW_PROPERTIES.filter((p) => !have.has(p.id))];
+};
 const INITIAL_PROPERTIES = [
-  { id: "altineige-28", name: "Altineige 2", building: "altineige", capacity: 5, doubleBeds: 0, code: "6095" },
   { id: "altineige-203", name: "Altineige 203", building: "altineige", capacity: 5, doubleBeds: 0, code: "5124", codeNote: "Key Box in Lobby" },
   { id: "altineige-208", name: "Altineige 208", building: "altineige", capacity: 4, doubleBeds: 0, code: "1321" },
-  { id: "le-serac-j10", name: "Le Sérac J10", building: "le-serac", capacity: 2, doubleBeds: 2, code: "9476" },
-  { id: "le-serac-k10", name: "Le Sérac K10", building: "le-serac", capacity: 6, doubleBeds: 1, code: "9247" },
+  { id: "le-serac-j10", name: "Le Sérac J10", building: "le-serac", capacity: 4, doubleBeds: 2, code: "9476" },
+  { id: "le-serac-k10", name: "Le Sérac K10", building: "le-serac", capacity: 7, doubleBeds: 1, code: "9247" },
   { id: "neves-67", name: "Neves 67", building: "neves", capacity: 5, doubleBeds: 0, code: "7855" },
-  { id: "neves-194", name: "Neves 194", building: "neves", capacity: 6, doubleBeds: 0, code: "5831" },
+  { id: "neves-194", name: "Neves 194", building: "neves", capacity: 5, doubleBeds: 0, code: "5831" },
   { id: "olympiades-112", name: "Olympiades 112", building: "olympiades", capacity: 2, doubleBeds: 1, code: "2004" },
   { id: "la-vanoise-473", name: "La Vanoise 473", building: "la-vanoise", capacity: 3, doubleBeds: 1, code: "2475" },
   { id: "dome-de-polset-315", name: "Dome 315", building: "dome-polset", capacity: 3, doubleBeds: 0, code: "1208" },
@@ -240,42 +264,45 @@ const INITIAL_PROPERTIES = [
   { id: "cusco-e18", name: "Cuzco E18", building: "temple-soleil", capacity: 6, doubleBeds: 0, code: "4729" },
   { id: "cusco-e19", name: "Cuzco E19", building: "temple-soleil", capacity: 6, doubleBeds: 0, code: "8356" },
   { id: "cusco-e20", name: "Cuzco E20", building: "temple-soleil", capacity: 6, doubleBeds: 0, code: "1493" },
-  { id: "cusco-k4", name: "Cuzco 4K", building: "temple-soleil", capacity: 6, doubleBeds: 0, code: "0301" },
-  { id: "glaciers-7", name: "Glaciers 7", building: "glaciers", capacity: 5, doubleBeds: 0, code: "6891" },
-  { id: "glaciers-31", name: "Glaciers 31", building: "glaciers", capacity: 4, doubleBeds: 0, code: "2515" },
+  { id: "cusco-k4", name: "Cuzco 4K", building: "temple-soleil", capacity: 5, doubleBeds: 0, code: "0301" },
   { id: "cime-de-caron-1304", name: "Cime de Caron 1304", building: "cime-caron", capacity: 5, doubleBeds: 1, code: "7062" },
   { id: "arcelle-304", name: "Arcelle 304", building: "arcelle", capacity: 6, doubleBeds: 0, code: "5992" },
   { id: "joker-16", name: "Joker 16", building: "joker", capacity: 6, doubleBeds: 2, code: "1016" },
   { id: "joker-c3", name: "Joker C3", building: "joker", capacity: 6, doubleBeds: 2, code: "1003" },
   { id: "joker-c4", name: "Joker C4", building: "joker", capacity: 6, doubleBeds: 2, code: "1004" },
   { id: "joker-c8", name: "Joker C8", building: "joker", capacity: 6, doubleBeds: 2 },
-  { id: "joker-b3", name: "Joker B3", building: "joker", capacity: 3, doubleBeds: 0, code: "5007" },
-  { id: "joker-b4", name: "Joker B4", building: "joker", capacity: 3, doubleBeds: 1, code: "5233" },
-  { id: "joker-b6", name: "Joker B6", building: "joker", capacity: 3, doubleBeds: 1, code: "5234" },
-  { id: "lauzieres-612", name: "L'Auzière 612", building: "lauzieres", capacity: 6, doubleBeds: 1, code: "1806" }
+  { id: "lauzieres-612", name: "L'Auzière 612", building: "lauzieres", capacity: 6, doubleBeds: 1, code: "1806" },
+  ...SEASON_NEW_PROPERTIES
 ];
 const KITCHEN_MULTIPLIERS = [
   { key: "knives", label: "סכיני אוכל", emoji: "🔪", perPerson: 2 },
   { key: "forks", label: "מזלגות", emoji: "🍴", perPerson: 2 },
   { key: "spoons", label: "כפות", emoji: "🥄", perPerson: 2 },
   { key: "smallSpoons", label: "כפיות", emoji: "☕", perPerson: 2 },
-  { key: "plates", label: "צלחות", emoji: "🍽️", perPerson: 2 },
-  { key: "bowls", label: "קערות", emoji: "🥣", perPerson: 2 },
-  { key: "glasses", label: "כוסות שתייה", emoji: "🥃", perPerson: 2 },
+  { key: "plates", label: "צלחות גדולות", emoji: "🍽️", perPerson: 2 },
+  { key: "deepPlates", label: "צלחות עמוקות", emoji: "🍜", perPerson: 2 },
+  { key: "smallPlates", label: "צלחות קטנות", emoji: "🍽️", perPerson: 2 },
+  { key: "bowls", label: "קערות אישיות", emoji: "🥣", perPerson: 2 },
+  { key: "glasses", label: "כוסות מים", emoji: "🥃", perPerson: 2 },
   { key: "wineGlasses", label: "כוסות יין", emoji: "🍷", perPerson: 1 },
-  { key: "coffeeMugs", label: "כוסות קפה", emoji: "☕", perPerson: 1 }
+  { key: "coffeeMugs", label: "כוסות קפה/תה", emoji: "☕", perPerson: 2 },
+  { key: "mugs", label: "ספלים", emoji: "☕", perPerson: 2 }
 ];
+// byOcc: target by max occupancy 2..8 (Uri's table). checkOnly: OK / not OK only, target shown as a hint.
 const KITCHEN_FIXED = [
-  { key: "fridge", label: "מקרר", emoji: "🧊" },
+  { key: "fridge", label: "מקרר", emoji: "🧊", byOcc: [110, 120, 130, 170, 200, 230, 250], checkOnly: true, unit: "ליטר" },
   { key: "oven", label: "תנור", emoji: "🔥" },
-  { key: "stove", label: "כיריים", emoji: "🔥" },
+  { key: "stove", label: "כיריים", emoji: "🔥", byOcc: [2, 2, 4, 4, 4, 4, 4], checkOnly: true, unit: "מוקדי בישול" },
   { key: "microwave", label: "מיקרוגל", emoji: "📦" },
-  { key: "dishwasher", label: "מדיח כלים", emoji: "💧" },
+  { key: "dishwasher", label: "מדיח כלים", emoji: "💧", byOcc: [0, 0, 1, 1, 1, 1, 1], checkOnly: true },
   { key: "kettle", label: "קומקום", emoji: "🫖" },
-  { key: "pans", label: "מחבתות", emoji: "🍳", count: 2 },
-  { key: "pots", label: "סירים", emoji: "🍲", count: 2 },
+  { key: "pans", label: "מחבתות", emoji: "🍳", byOcc: [1, 1, 1, 1, 2, 2, 2] },
+  { key: "pots", label: "סירים קטנים/בינוניים", emoji: "🍲", byOcc: [2, 2, 2, 2, 2, 2, 2] },
+  { key: "bigPot", label: "סיר גדול", emoji: "🍲", byOcc: [1, 1, 1, 1, 1, 1, 1] },
+  { key: "lids", label: "מכסים", emoji: "🥘", byOcc: [1, 1, 1, 2, 2, 2, 2] },
   { key: "chefKnife", label: "סכין שף לחיתוך", emoji: "🔪" },
-  { key: "cuttingBoard", label: "קרש חיתוך", emoji: "🪵" },
+  { key: "cuttingBoard", label: "קרש חיתוך", emoji: "🪵", byOcc: [1, 1, 1, 2, 2, 2, 2] },
+  { key: "saladBowls", label: "קערות סלט גדולות", emoji: "🥗", byOcc: [1, 1, 1, 1, 2, 2, 2] },
   { key: "cookingSpoons", label: "כפות בישול", emoji: "🥄", count: 2 },
   { key: "strainer", label: "מסננת", emoji: "🥡" },
   { key: "opener", label: "פותחן/חולץ", emoji: "🍾" },
@@ -323,6 +350,11 @@ const getItemRequired = (item, capacity, category, targets) => {
   const override = targets && targets[targetKey(category, item.key)];
   if (override && override.perPerson) {
     return { required: capacity * override.perPerson, isCountable: true };
+  }
+  if (item.byOcc) {
+    const target = item.byOcc[Math.min(8, Math.max(2, Number(capacity) || 2)) - 2];
+    if (item.checkOnly) return { required: 1, isCountable: false, target };
+    return { required: target, isCountable: true, target };
   }
   if (item.perPerson) return { required: capacity * item.perPerson, isCountable: true };
   if (item.count && item.count > 1) return { required: item.count, isCountable: true };
@@ -606,6 +638,12 @@ const IKEA_DEPARTMENTS = {
   glasses: "כלי אוכל",
   wineGlasses: "כלי אוכל",
   coffeeMugs: "כלי אוכל",
+  mugs: "כלי אוכל",
+  deepPlates: "כלי אוכל",
+  smallPlates: "כלי אוכל",
+  bigPot: "כלי בישול",
+  lids: "כלי בישול",
+  saladBowls: "כלי אוכל",
   // kitchen — cooking tools & small electricals
   kettle: "מטבח קטן",
   pans: "כלי בישול",
@@ -733,7 +771,8 @@ const computePropertyShortages = (property, inspection, targets) => {
       const v = (_a = inspection[category]) == null ? void 0 : _a[item.key];
       const hasTarget = targets && targets[targetKey(category, item.key)];
       if (!hasTarget && (!v || v.status === "ok" || v.status === "pending")) return;
-      const { required, isCountable } = getItemRequired(item, cap, category, targets);
+      const { required, isCountable, target } = getItemRequired(item, cap, category, targets);
+      if (item.checkOnly && target === 0) return;
       let qty;
       if (hasTarget && isCountable) {
         const present = Number(v == null ? void 0 : v.presentCount);
@@ -981,13 +1020,18 @@ const Drawer = ({ icon, title, subtitle, accent = "copper", defaultOpen = false,
     /* @__PURE__ */ React.createElement(IconChevron, { size: 18, className: `text-ice-100/50 transition-transform ${open ? "rotate-180" : ""}` })
   ), open && /* @__PURE__ */ React.createElement("div", { className: "px-3 pb-3 anim-drawer" }, children));
 };
-const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange, onClose }) => {
+const StatusSheet = ({ open, item, requiredCount, isMultiplier, targetHint, value, onChange, onClose }) => {
   if (!open || !item || !value) return null;
   const status = value.status || "pending";
   const have = Number.isFinite(value.presentCount) ? value.presentCount : 0;
   const missing = Number.isFinite(value.missingCount) ? value.missingCount : 0;
   const setStatus = (s) => onChange({ ...value, status: s });
-  const setHave = (n) => onChange({ ...value, presentCount: Math.max(0, n) });
+  const setHave = (n) => {
+    const present = Math.max(0, n);
+    const next = { ...value, presentCount: present };
+    if (isMultiplier && requiredCount && !Number.isFinite(value.missingCount)) next.status = present >= requiredCount ? "ok" : "partial";
+    onChange(next);
+  };
   const setMissing = (n) => onChange({ ...value, missingCount: Math.max(0, n), status: n > 0 ? "partial" : value.status });
   const clearStatus = () => onChange({ status: "pending", note: "", presentCount: null, missingCount: null });
   return /* @__PURE__ */ React.createElement(
@@ -1004,7 +1048,7 @@ const StatusSheet = ({ open, item, requiredCount, isMultiplier, value, onChange,
         style: { boxShadow: "0 -20px 40px -10px rgba(0,0,0,0.6)" }
       },
       /* @__PURE__ */ React.createElement("div", { className: "w-12 h-1.5 mx-auto rounded-full bg-white/15 mt-2 mb-3" }),
-      /* @__PURE__ */ React.createElement("div", { className: "px-5 pb-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0 text-ice-100/80" }, /* @__PURE__ */ React.createElement(ItemIcon, { itemKey: item.key, size: 30 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-ice-50 leading-tight" }, item.label), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50 mt-0.5" }, "הזן כמה יש בדירה")), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "p-2 rounded-lg text-ice-100/60 hover:bg-white/[0.05] shrink-0" }, /* @__PURE__ */ React.createElement(IconX, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2" }, /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("div", { className: "px-5 pb-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0 text-ice-100/80" }, /* @__PURE__ */ React.createElement(ItemIcon, { itemKey: item.key, size: 30 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-ice-50 leading-tight" }, item.label), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50 mt-0.5" }, targetHint ? `יעד לדירה: ${targetHint}` : "הזן כמה יש בדירה")), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "p-2 rounded-lg text-ice-100/60 hover:bg-white/[0.05] shrink-0" }, /* @__PURE__ */ React.createElement(IconX, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2" }, /* @__PURE__ */ React.createElement(
         "button",
         {
           type: "button",
@@ -1155,6 +1199,7 @@ const useRoomSheet = ({ inspection, categoryKey, items, capacity, onChange }) =>
   const selectedItem = selectedKey ? items.find((i) => i.key === selectedKey) : null;
   const selectedValue = selectedKey ? inspection[categoryKey][selectedKey] || blankStatus() : null;
   const reqInfo = selectedItem ? getItemRequired(selectedItem, capacity) : null;
+  const targetHint = reqInfo && selectedItem.checkOnly ? (reqInfo.target === 0 ? "לא נדרש" : selectedItem.unit ? `${reqInfo.target} ${selectedItem.unit}` : "נדרש") : (reqInfo && reqInfo.isCountable ? `${reqInfo.required}` : null);
   const sheet = /* @__PURE__ */ React.createElement(
     StatusSheet,
     {
@@ -1162,6 +1207,7 @@ const useRoomSheet = ({ inspection, categoryKey, items, capacity, onChange }) =>
       item: selectedItem,
       requiredCount: reqInfo == null ? void 0 : reqInfo.required,
       isMultiplier: reqInfo == null ? void 0 : reqInfo.isCountable,
+      targetHint,
       value: selectedValue,
       onChange: (v) => update(selectedKey, v),
       onClose: () => setSelectedKey(null)
@@ -3329,7 +3375,7 @@ const ConnectModal = ({ onClose }) => {
 };
 const App = () => {
   const [mode, setMode] = useState("inspect");
-  const [properties, setProperties] = useState(() => safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES));
+  const [properties, setProperties] = useState(() => applySeasonProperties(safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES)));
   const [inspections, setInspections] = useState(() => safeLoad(STORAGE_KEYS.inspections, {}));
   const [targets, setTargets] = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
@@ -3385,7 +3431,7 @@ const App = () => {
     }, () => setSyncStatus("error"));
     db.ref("properties").once("value").then((s) => {
       const p = s.val();
-      if (Array.isArray(p) && p.length) setProperties(p);
+      if (Array.isArray(p) && p.length) setProperties(applySeasonProperties(p));
     });
     db.ref("targets").once("value").then((s) => {
       const t = s.val();
@@ -3451,7 +3497,7 @@ const App = () => {
         fromRemote.current = false;
       }, 50);
       const p = propsSnap.val();
-      if (Array.isArray(p) && p.length) setProperties(p);
+      if (Array.isArray(p) && p.length) setProperties(applySeasonProperties(p));
       const t = tgtsSnap.val();
       if (t && Object.keys(t).length) setTargets(t);
       setSyncStatus("ok");
