@@ -221,6 +221,34 @@ const BUILDINGS = [
   { id: "arcelle", name: "Arcelle", short: "Arcelle", emoji: "🏠", area: "Place de Caron", accent: "rose" },
   { id: "lauzieres", name: "Lauzières", short: "Lauzières", emoji: "🏠", area: "Place de Caron", accent: "rose" }
 ];
+// 17.11.2026: active StoliSki Val Thorens apartments (rep_cleaning_schedule + apartment_pricing).
+// Capacity from apartment_expense_tracking.max_people. No door codes in our data for these - left empty.
+const ADDED_PROPERTIES = [
+  { id: "cusco-d1", name: "Cuzco D1", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-d2", name: "Cuzco D2", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-e10", name: "Cuzco E10", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-e15", name: "Cuzco E15", building: "temple-soleil", capacity: 4, doubleBeds: 0 },
+  { id: "cusco-f3", name: "Cuzco F3", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-f4", name: "Cuzco F4", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-g19", name: "Cuzco G19", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-g20", name: "Cuzco G20", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-k14", name: "Cuzco K14", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "nazca-c7", name: "Nazca C7", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "machu-514", name: "Machu 514", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "pichu-705", name: "Pichu 705", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "la-vanoise-154", name: "La Vanoise 154", building: "la-vanoise", capacity: 4, doubleBeds: 0 },
+  { id: "lauzieres-003", name: "L'Auzière 003", building: "lauzieres", capacity: 5, doubleBeds: 0 },
+  { id: "lauzieres-521", name: "L'Auzière 521", building: "lauzieres", capacity: 4, doubleBeds: 0 }
+];
+// No longer ours: hidden from every list. Ids and their inspections stay stored (Firebase + device).
+const HIDDEN_PROPERTY_IDS = new Set(["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6"]);
+// Saved lists (device / Firebase) predate the new apartments: append any that are missing.
+const withAddedProperties = (list) => {
+  if (!Array.isArray(list)) return list;
+  const have = new Set(list.map((p) => p.id));
+  const missing = ADDED_PROPERTIES.filter((p) => !have.has(p.id));
+  return missing.length ? [...list, ...missing] : list;
+};
 const INITIAL_PROPERTIES = [
   { id: "altineige-28", name: "Altineige 2", building: "altineige", capacity: 5, doubleBeds: 0, code: "6095" },
   { id: "altineige-203", name: "Altineige 203", building: "altineige", capacity: 5, doubleBeds: 0, code: "5124", codeNote: "Key Box in Lobby" },
@@ -252,7 +280,8 @@ const INITIAL_PROPERTIES = [
   { id: "joker-b3", name: "Joker B3", building: "joker", capacity: 3, doubleBeds: 0, code: "5007" },
   { id: "joker-b4", name: "Joker B4", building: "joker", capacity: 3, doubleBeds: 1, code: "5233" },
   { id: "joker-b6", name: "Joker B6", building: "joker", capacity: 3, doubleBeds: 1, code: "5234" },
-  { id: "lauzieres-612", name: "L'Auzière 612", building: "lauzieres", capacity: 6, doubleBeds: 1, code: "1806" }
+  { id: "lauzieres-612", name: "L'Auzière 612", building: "lauzieres", capacity: 6, doubleBeds: 1, code: "1806" },
+  ...ADDED_PROPERTIES
 ];
 const KITCHEN_MULTIPLIERS = [
   { key: "knives", label: "סכיני אוכל", emoji: "🔪", perPerson: 2 },
@@ -3199,7 +3228,8 @@ const ConnectModal = ({ onClose }) => {
 };
 const App = () => {
   const [mode, setMode] = useState("inspect");
-  const [properties, setProperties] = useState(() => safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES));
+  const [properties, setProperties] = useState(() => withAddedProperties(safeLoad(STORAGE_KEYS.properties, INITIAL_PROPERTIES)));
+  const visibleProperties = useMemo(() => properties.filter((p) => !HIDDEN_PROPERTY_IDS.has(p.id)), [properties]);
   const [inspections, setInspections] = useState(() => safeLoad(STORAGE_KEYS.inspections, {}));
   const [targets, setTargets] = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
@@ -3255,7 +3285,7 @@ const App = () => {
     }, () => setSyncStatus("error"));
     db.ref("properties").once("value").then((s) => {
       const p = s.val();
-      if (Array.isArray(p) && p.length) setProperties(p);
+      if (Array.isArray(p) && p.length) setProperties(withAddedProperties(p));
     });
     db.ref("targets").once("value").then((s) => {
       const t = s.val();
@@ -3313,7 +3343,7 @@ const App = () => {
         fromRemote.current = false;
       }, 50);
       const p = propsSnap.val();
-      if (Array.isArray(p) && p.length) setProperties(p);
+      if (Array.isArray(p) && p.length) setProperties(withAddedProperties(p));
       const t = tgtsSnap.val();
       if (t && Object.keys(t).length) setTargets(t);
       setSyncStatus("ok");
@@ -3349,7 +3379,7 @@ const App = () => {
       const data = JSON.parse(text);
       if (!data.properties || !data.inspections) throw new Error("bad format");
       if (!confirm("פעולה זו תחליף את כל הנתונים השמורים. להמשיך?")) return;
-      setProperties(data.properties);
+      setProperties(withAddedProperties(data.properties));
       setInspections(data.inspections);
       alert("הייבוא הושלם בהצלחה.");
     } catch (err) {
@@ -3433,7 +3463,7 @@ const App = () => {
   ), /* @__PURE__ */ React.createElement(IconChevRight, { size: 10 }), /* @__PURE__ */ React.createElement("span", { className: ROOM_ACCENT[currentRoom.accent].text }, currentRoom.label)) : /* @__PURE__ */ React.createElement("span", { className: "text-ice-50/80" }, property.name)))), /* @__PURE__ */ React.createElement("main", { className: "flex-1 max-w-2xl mx-auto w-full pb-safe relative z-10" }, mode === "inspect" && !selectedAptId && /* @__PURE__ */ React.createElement(
     ApartmentGrid,
     {
-      properties,
+      properties: visibleProperties,
       inspections,
       setInspection,
       onSelect: setSelectedAptId
@@ -3454,7 +3484,7 @@ const App = () => {
       roomKey: selectedRoom,
       onChange: handleInspectionChange
     }
-  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
+  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties: visibleProperties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties: visibleProperties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
 };
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(/* @__PURE__ */ React.createElement(App, null));
