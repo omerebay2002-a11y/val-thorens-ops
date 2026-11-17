@@ -221,7 +221,7 @@ const BUILDINGS = [
   { id: "arcelle", name: "Arcelle", short: "Arcelle", emoji: "🏠", area: "Place de Caron", accent: "rose" },
   { id: "lauzieres", name: "Lauzières", short: "Lauzières", emoji: "🏠", area: "Place de Caron", accent: "rose" }
 ];
-// Season 2026/27: 32 apartments (BOOKED from 01.11.2026 in ota_reservations).
+// Season 2026/27: 40 apartments (Hostfully, 17.11.2026); was 32 (BOOKED from 01.11.2026 in ota_reservations).
 // Capacity: apartment_next_season_planning, else the app. The four marked capacityProvisional
 // have neither - capacity is the max adults seen in their bookings; verify in Setup.
 const SEASON_NEW_PROPERTIES = [
@@ -231,7 +231,16 @@ const SEASON_NEW_PROPERTIES = [
   { id: "lauzieres-003", name: "Lauzières 003", building: "lauzieres", capacity: 5, doubleBeds: 0, capacityProvisional: true },
   { id: "lauzieres-521", name: "Lauzières 521", building: "lauzieres", capacity: 4, doubleBeds: 0, capacityProvisional: true },
   { id: "machu-514", name: "Machu 514", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
-  { id: "pichu-705", name: "Pichu 705", building: "temple-soleil", capacity: 5, doubleBeds: 0 }
+  { id: "pichu-705", name: "Pichu 705", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  // Added 17.11.2026: Hostfully lists 40 Val Thorens apartments. Capacity from apartment_next_season_planning (E15: expense tracking).
+  { id: "cusco-d1", name: "Cusco D1", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-d2", name: "Cusco D2", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-e15", name: "Cusco E15", building: "temple-soleil", capacity: 4, doubleBeds: 0 },
+  { id: "cusco-f3", name: "Cusco F3", building: "temple-soleil", capacity: 6, doubleBeds: 0 },
+  { id: "cusco-g19", name: "Cusco G19", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-g20", name: "Cusco G20", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "cusco-k14", name: "Cusco K14", building: "temple-soleil", capacity: 5, doubleBeds: 0 },
+  { id: "nazca-c7", name: "Nazca C7", building: "temple-soleil", capacity: 6, doubleBeds: 0 }
 ];
 const SEASON_RETIRED_IDS = ["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6"];
 const SEASON_CAPACITY = { "cusco-k4": 5, "le-serac-j10": 4, "le-serac-k10": 7, "neves-194": 5 };
@@ -240,7 +249,7 @@ const SEASON_CAPACITY = { "cusco-k4": 5, "le-serac-j10": 4, "le-serac-k10": 7, "
 const applySeasonProperties = (list) => {
   if (!Array.isArray(list)) return list;
   const ids = new Set(list.map((p) => p.id));
-  const needs = list.some((p) => SEASON_RETIRED_IDS.includes(p.id)) || !SEASON_NEW_PROPERTIES.some((p) => ids.has(p.id));
+  const needs = list.some((p) => SEASON_RETIRED_IDS.includes(p.id)) || SEASON_NEW_PROPERTIES.some((p) => !ids.has(p.id));
   if (!needs) return list;
   const kept = list.filter((p) => !SEASON_RETIRED_IDS.includes(p.id)).map((p) => SEASON_CAPACITY[p.id] ? { ...p, capacity: SEASON_CAPACITY[p.id] } : p);
   const have = new Set(kept.map((p) => p.id));
