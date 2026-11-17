@@ -240,8 +240,8 @@ const ADDED_PROPERTIES = [
   { id: "lauzieres-003", name: "L'Auzière 003", building: "lauzieres", capacity: 5, doubleBeds: 0 },
   { id: "lauzieres-521", name: "L'Auzière 521", building: "lauzieres", capacity: 4, doubleBeds: 0 }
 ];
-// No longer ours: hidden from every list. Ids and their inspections stay stored (Firebase + device).
-const HIDDEN_PROPERTY_IDS = new Set(["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6"]);
+// No longer ours (Joker C3: Omer's own home, not a guest apartment): hidden from every list. Ids and their inspections stay stored (Firebase + device).
+const HIDDEN_PROPERTY_IDS = new Set(["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6", "joker-c3"]);
 // Saved lists (device / Firebase) predate the new apartments: append any that are missing.
 const withAddedProperties = (list) => {
   if (!Array.isArray(list)) return list;
