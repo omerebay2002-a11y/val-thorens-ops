@@ -2632,25 +2632,42 @@ const VantaHero = () => {
   }, []);
   return /* @__PURE__ */ React.createElement("div", { ref, className: "absolute inset-0" });
 };
-const AptCard = ({ property, inspection, onClick, index }) => {
+const aptSummary = (property, inspection, targets) => {
+  const cats = Object.keys(CATEGORY_META).map((c) => categoryCounts(inspection, c));
+  const sum = cats.reduce((a, c) => ({ ok: a.ok + c.ok, partial: a.partial + c.partial, missing: a.missing + c.missing, pending: a.pending + c.pending, total: a.total + c.total }), { ok: 0, partial: 0, missing: 0, pending: 0, total: 0 });
+  const missingUnits = computePropertyShortages(property, inspection, targets).reduce((a, r) => a + (r.qty || 0), 0);
+  const m = (inspection && inspection.maintenance) || {};
+  const maintOpen = ((m.renovations || "").trim() ? 1 : 0) + normalizePhotos(m.photos).length;
+  const updated = inspection && (inspection.updatedAt || inspection.completedAt);
+  const days = updated ? Math.floor((Date.now() - updated) / 864e5) : null;
+  return { sum, missingUnits, maintOpen, updated, days, stale: days == null || days > 30, checked: !!updated };
+};
+const AptCard = ({ property, inspection, targets, onClick, index }) => {
+  const h = React.createElement;
   const progress = inspectionProgress(inspection);
   const issues = inspectionHasIssues(inspection);
   const completed = inspection == null ? void 0 : inspection.completed;
-  const tone = completed ? "emerald" : issues ? "amber" : progress > 0 ? "sky" : "slate";
+  const s = useMemo(() => aptSummary(property, inspection, targets), [property, inspection, targets]);
   const ring = completed ? "border-emerald-400/40" : issues ? "border-amber-400/40" : progress > 0 ? "border-sky-400/30" : "border-white/10";
-  const ringColor = completed ? "#34d399" : issues ? "#fbbf24" : progress > 0 ? "#5a8edb" : "#94a3b8";
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      onClick,
-      className: `group relative tilt rounded-2xl glass border ${ring} p-3 text-right overflow-hidden`,
-      style: { animationDelay: `${Math.min(index * 30, 600)}ms` }
-    },
-    /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 opacity-0 group-hover:opacity-100 transition", style: { background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 60%)" } }),
-    /* @__PURE__ */ React.createElement("div", { className: "relative flex items-center gap-3" }, /* @__PURE__ */ React.createElement(ProgressRing, { pct: progress, size: 48, stroke: 4, color: ringColor }), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display text-base text-ice-50 truncate leading-tight" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-ice-100/50 flex items-center gap-2 mt-0.5" }, /* @__PURE__ */ React.createElement("span", null, "תפוסה ", property.capacity), property.doubleBeds > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "·"), /* @__PURE__ */ React.createElement("span", null, property.doubleBeds, " זוגיות"))), property.code && /* @__PURE__ */ React.createElement("div", { className: "mt-1 flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "font-mono font-bold text-[12px] tracking-widest text-copper-300 bg-copper-500/10 border border-copper-500/30 px-1.5 py-0.5 rounded-md" }, property.code), property.codeNote && /* @__PURE__ */ React.createElement("span", { className: "text-[10px] text-ice-100/40" }, property.codeNote)))),
-    /* @__PURE__ */ React.createElement("div", { className: "relative mt-2 flex items-center justify-between" }, completed ? /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 font-bold" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 10 }), " הושלמה") : issues ? /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-200 border border-amber-400/30 font-bold" }, /* @__PURE__ */ React.createElement(IconAlert, { size: 10 }), " ליקויים") : progress > 0 ? /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-sky-400/15 text-sky-200 border border-sky-400/30 font-bold" }, "בטיפול") : /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-ice-100/50 border border-white/10 font-bold" }, "ממתינה"), /* @__PURE__ */ React.createElement(IconChevRight, { size: 14, className: "text-ice-100/40 group-hover:text-ice-50 transition" }))
-  );
+  const status = completed ? { t: "הושלמה", c: "bg-emerald-500/15 text-emerald-100 border-emerald-400/40" } : issues ? { t: "ליקויים", c: "bg-amber-500/15 text-amber-100 border-amber-400/40" } : progress > 0 ? { t: `בבדיקה ${progress}%`, c: "bg-sky-400/15 text-sky-100 border-sky-400/40" } : { t: "ממתינה", c: "bg-white/[0.06] text-ice-50/85 border-white/15" };
+  return h("button", {
+    type: "button", onClick,
+    className: `group relative rounded-2xl glass border ${ring} p-3 text-right overflow-hidden flex flex-col gap-2 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300`,
+    style: { animationDelay: `${Math.min(index * 30, 600)}ms` },
+    "aria-label": `${property.name}: ${status.t}, ${s.missingUnits ? `חסרות ${s.missingUnits} יחידות` : "אין חסרים"}, ${s.checked ? `נבדקה ב-${fmtDay(s.updated)}` : "לא נבדקה"}`
+  },
+    h("div", { className: "flex items-start justify-between gap-2" },
+      h("div", { className: "min-w-0" },
+        h("div", { className: "text-base font-semibold text-ice-50 truncate leading-tight" }, property.name),
+        h("div", { className: "text-[13px] text-ice-50/75 mt-0.5" }, "תפוסה ", property.capacity, property.doubleBeds > 0 ? `, ${property.doubleBeds} זוגיות` : "")),
+      property.code && h("span", { className: "shrink-0 rounded-md bg-white/[0.06] border border-white/10 px-1.5 py-0.5 text-[13px] font-mono text-ice-50/90" }, property.code)),
+    h("div", { className: "flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]", "aria-hidden": "true" },
+      STATUS_BAR.map((b) => s.sum[b.key] ? h("span", { key: b.key, className: b.cls, style: { width: `${s.sum[b.key] / Math.max(s.sum.total, 1) * 100}%` } }) : null)),
+    h("div", { className: "flex flex-wrap items-center gap-1.5 text-[13px]" },
+      h("span", { className: `rounded-full border px-2 py-0.5 font-semibold ${status.c}` }, status.t),
+      s.missingUnits > 0 && h("span", { className: "rounded-full border border-rose-400/40 bg-rose-400/10 px-2 py-0.5 text-rose-100" }, "חסר ", s.missingUnits),
+      s.maintOpen > 0 && h("span", { className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-amber-100" }, "תחזוקה")),
+    h("div", { className: `text-[13px] ${s.stale ? "text-amber-200" : "text-ice-50/70"}` }, s.checked ? `נבדקה ${fmtDay(s.updated)}` : "עוד לא נבדקה"));
 };
 const BuildingHeader = ({ building, count, done, issues, expanded, onToggle }) => {
   const tone = ROOM_ACCENT[building.accent] || ROOM_ACCENT.copper;
@@ -2667,7 +2684,7 @@ const BuildingHeader = ({ building, count, done, issues, expanded, onToggle }) =
     /* @__PURE__ */ React.createElement(IconChevron, { size: 18, className: `text-ice-100/40 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}` })
   );
 };
-const BuildingGroups = ({ properties, inspections, onSelect, search }) => {
+const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) => {
   const [collapsed, setCollapsed] = useState({});
   const isSearching = !!search.trim();
   const groups = useMemo(() => {
@@ -2710,13 +2727,14 @@ const BuildingGroups = ({ properties, inspections, onSelect, search }) => {
         key: p.id,
         property: p,
         inspection: inspections[p.id],
+        targets,
         index: i,
         onClick: () => onSelect(p.id)
       }
     ))));
   }));
 };
-const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => {
+const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSelect }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const filtered = useMemo(() => {
@@ -2727,9 +2745,15 @@ const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => 
       if (filter === "done" && !(ins == null ? void 0 : ins.completed)) return false;
       if (filter === "pending" && (ins == null ? void 0 : ins.completed)) return false;
       if (filter === "issues" && !inspectionHasIssues(ins)) return false;
+      if (filter === "buy" || filter === "maint" || filter === "stale") {
+        const sm = aptSummary(p, ins, targets);
+        if (filter === "buy" && !sm.missingUnits) return false;
+        if (filter === "maint" && !sm.maintOpen) return false;
+        if (filter === "stale" && !sm.stale) return false;
+      }
       return true;
     });
-  }, [properties, inspections, search, filter]);
+  }, [properties, inspections, targets, search, filter]);
   const stats = useMemo(() => {
     let done = 0, issues = 0, inProg = 0;
     properties.forEach((p) => {
@@ -2738,13 +2762,25 @@ const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => 
       else if (inspectionHasIssues(ins)) issues += 1;
       else if (ins && inspectionProgress(ins) > 0) inProg += 1;
     });
-    return { total: properties.length, done, issues, inProg };
-  }, [properties, inspections]);
+    let buyApts = 0, buyUnits = 0, maint = 0, stale = 0;
+    properties.forEach((p) => {
+      const sm = aptSummary(p, inspections[p.id], targets);
+      if (sm.missingUnits) { buyApts += 1; buyUnits += sm.missingUnits; }
+      if (sm.maintOpen) maint += 1;
+      if (sm.stale) stale += 1;
+    });
+    return { total: properties.length, done, issues, inProg, buyApts, buyUnits, maint, stale };
+  }, [properties, inspections, targets]);
   const handleSelect = (id) => {
     if (!inspections[id]) setInspection(id, createBlankInspection());
     onSelect(id);
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "relative anim-fade-in" }, /* @__PURE__ */ React.createElement("div", { className: "relative h-56 sm:h-64 overflow-hidden" }, /* @__PURE__ */ React.createElement(VantaHero, null), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-gradient-to-b from-night-950/30 via-night-950/10 to-night-950" }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 flex flex-col items-center justify-center text-center px-4 anim-slide-up" }, /* @__PURE__ */ React.createElement("div", { className: "text-[10px] uppercase tracking-[0.4em] text-copper-300/80 display" }, "Val Thorens · 3,230 m"), /* @__PURE__ */ React.createElement("h1", { className: "display text-4xl sm:text-5xl text-ice-50 mt-1" }, "בדיקת דירות"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-ice-100/60 mt-1.5" }, properties.length, " דירות אלפיניות · ניהול מלא"))), /* @__PURE__ */ React.createElement("div", { className: "px-4 -mt-6 relative z-10" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-2 mb-4 stagger" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-white/10 p-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-ice-50" }, stats.total), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-ice-100/50 mt-0.5" }, 'סה"כ')), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-emerald-400/30 p-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-emerald-300" }, stats.done), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-emerald-200/70 mt-0.5" }, "הושלמו")), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-sky-400/30 p-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-sky-300" }, stats.inProg), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-sky-200/70 mt-0.5" }, "בטיפול")), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl glass border border-amber-400/30 p-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "display text-2xl text-amber-300" }, stats.issues), /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-amber-200/70 mt-0.5" }, "ליקויים"))), /* @__PURE__ */ React.createElement("div", { className: "relative mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "absolute right-3 top-1/2 -translate-y-1/2 text-ice-100/40" }, /* @__PURE__ */ React.createElement(IconSearch, { size: 18 })), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "relative anim-fade-in" }, /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-5 relative" }, React.createElement("div", { className: "mb-4" }, React.createElement("h1", { className: "text-2xl font-semibold text-ice-50" }, "דירות ואל טורנס"), React.createElement("p", { className: "text-sm text-ice-50/75 mt-0.5" }, stats.total, " דירות, ", stats.done, " הושלמו")), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4" }, [
+    { key: "buy", value: stats.buyApts, label: "צריכות קניות", sub: `${stats.buyUnits} יחידות חסרות`, tone: "border-rose-400/40 bg-rose-400/10 text-rose-100" },
+    { key: "maint", value: stats.maint, label: "תחזוקה פתוחה", sub: "הערות ותמונות", tone: "border-amber-300/40 bg-amber-400/10 text-amber-100" },
+    { key: "stale", value: stats.stale, label: "בדיקה ישנה", sub: "מעל 30 יום או לא נבדקה", tone: "border-sky-400/40 bg-sky-400/10 text-sky-100" },
+    { key: "done", value: stats.done, label: "הושלמו", sub: `מתוך ${stats.total}`, tone: "border-emerald-400/40 bg-emerald-400/10 text-emerald-100" }
+  ].map((t) => React.createElement("button", { key: t.key, type: "button", onClick: () => setFilter(filter === t.key ? "all" : t.key), "aria-pressed": filter === t.key, className: `rounded-2xl border p-3 text-right min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 ${t.tone} ${filter === t.key ? "ring-2 ring-copper-300" : ""}` }, React.createElement("div", { className: "text-3xl font-semibold leading-none tabular-nums" }, t.value), React.createElement("div", { className: "mt-1.5 text-sm font-semibold" }, t.label), React.createElement("div", { className: "text-[13px] text-ice-50/75" }, t.sub)))), /* @__PURE__ */ React.createElement("div", { className: "relative mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "absolute right-3 top-1/2 -translate-y-1/2 text-ice-100/40" }, /* @__PURE__ */ React.createElement(IconSearch, { size: 18 })), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",
@@ -2757,18 +2793,21 @@ const ApartmentGrid = ({ properties, inspections, setInspection, onSelect }) => 
     { key: "all", label: "הכל", icon: /* @__PURE__ */ React.createElement(IconFilter, { size: 12 }) },
     { key: "pending", label: "ממתינות", icon: null },
     { key: "issues", label: "ליקויים", icon: /* @__PURE__ */ React.createElement(IconAlert, { size: 12 }) },
-    { key: "done", label: "הושלמו", icon: /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }) }
+    { key: "done", label: "הושלמו", icon: /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }) },
+    { key: "buy", label: "צריך קניות", icon: null },
+    { key: "maint", label: "תחזוקה", icon: null },
+    { key: "stale", label: "בדיקה ישנה", icon: null }
   ].map((f) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: f.key,
       type: "button",
       onClick: () => setFilter(f.key),
-      className: `shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition flex items-center gap-1 ${filter === f.key ? "bg-copper-500 text-white border-copper-500 shadow-[0_6px_20px_-8px_rgba(200,127,62,0.7)]" : "bg-white/[0.04] text-ice-100/70 border-white/10 hover:bg-white/[0.08]"}`
+      "aria-pressed": filter === f.key, className: `shrink-0 min-h-[40px] px-3.5 py-2 rounded-full text-sm font-semibold border transition flex items-center gap-1 ${filter === f.key ? "bg-copper-500 text-white border-copper-500" : "bg-white/[0.04] text-ice-50/85 border-white/15 hover:bg-white/[0.08]"}`
     },
     f.icon,
     f.label
-  ))), filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50" }, "לא נמצאו דירות תואמות") : /* @__PURE__ */ React.createElement(BuildingGroups, { properties: filtered, inspections, onSelect: handleSelect, search })));
+  ))), filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50" }, "לא נמצאו דירות תואמות") : /* @__PURE__ */ React.createElement(BuildingGroups, { properties: filtered, inspections, targets, onSelect: handleSelect, search })));
 };
 const CloudSyncCard = ({ syncStatus }) => /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-4 space-y-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-xl" }, "☁️"), /* @__PURE__ */ React.createElement("h2", { className: "display text-xl text-ice-50" }, "סנכרון ענן")), /* @__PURE__ */ React.createElement("span", { className: `text-xs font-bold px-2 py-1 rounded-full ${syncStatus === "ok" ? "bg-emerald-500/20 text-emerald-300" : syncStatus === "syncing" ? "bg-amber-500/20   text-amber-300" : "bg-rose-500/20    text-rose-300"}` }, syncStatus === "ok" ? "● מסונכרן" : syncStatus === "syncing" ? "◌ מסנכרן…" : "✕ שגיאת רשת")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-ice-100/60" }, "כל הנתונים נשמרים אוטומטית בענן ומשותפים בין כולם. כל שינוי שאת/ה עושה מופיע אצל הבוסים שלך תוך 15 שניות."));
 const SetupView = ({ properties, setProperties, inspections, setInspections, syncStatus }) => {
@@ -3542,6 +3581,7 @@ const App = () => {
     {
       properties: visibleProperties,
       inspections,
+      targets,
       setInspection,
       onSelect: setSelectedAptId
     }
