@@ -2484,12 +2484,89 @@ const ExitCheckpoint = ({ inspection, onChange }) => {
     " פתח מחדש לעריכה"
   )));
 };
-const ApartmentWorkspace = ({ property, inspection, onChange, onOpenRoom }) => {
+const fmtDay = (ts) => {
+  const d = new Date(ts);
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+};
+const STATUS_BAR = [
+  { key: "ok", label: "תקין", cls: "bg-emerald-400" },
+  { key: "partial", label: "חלקי", cls: "bg-amber-400" },
+  { key: "missing", label: "חסר", cls: "bg-rose-400" },
+  { key: "pending", label: "לא נבדק", cls: "bg-white/15" }
+];
+const categoryCounts = (insp, cat) => {
+  const c = { ok: 0, partial: 0, missing: 0, pending: 0, total: 0 };
+  Object.values((insp && insp[cat]) || {}).forEach((v) => {
+    const st = v && STATUS_BAR.some((b) => b.key === v.status) ? v.status : "pending";
+    c[st] += 1;
+    c.total += 1;
+  });
+  return c;
+};
+const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => {
+  const h = React.createElement;
+  const shortages = useMemo(() => computePropertyShortages(property, inspection, targets), [property, inspection, targets]);
+  const updated = inspection && (inspection.updatedAt || inspection.completedAt);
+  const days = updated ? Math.floor((Date.now() - updated) / 864e5) : null;
+  const stale = days != null && days > 30;
+  const cats = Object.keys(CATEGORY_META);
+  const all = cats.map((c) => categoryCounts(inspection, c));
+  const okTotal = all.reduce((a, c) => a + c.ok, 0);
+  const itemTotal = all.reduce((a, c) => a + c.total, 0);
+  const missingUnits = shortages.reduce((a, r) => a + (r.qty || 0), 0);
+  const m = (inspection && inspection.maintenance) || {};
+  const photos = normalizePhotos(m.photos);
+  const maintText = (m.renovations || "").trim();
+  const maintOpen = (maintText ? 1 : 0) + photos.length;
+  const tile = (value, label, tone) => h("div", { className: `rounded-2xl border p-3 text-center ${tone}` },
+    h("div", { className: "text-3xl font-semibold leading-none tabular-nums" }, value),
+    h("div", { className: "mt-1.5 text-sm text-ice-50/85" }, label));
+  return h("section", { className: "rounded-3xl glass-strong border border-white/10 p-4 space-y-4", "aria-label": `מצב הדירה ${property.name}` },
+    h("div", { className: "flex items-start justify-between gap-3" },
+      h("div", null,
+        h("h2", { className: "text-lg font-semibold text-ice-50" }, "מצב הדירה"),
+        h("p", { className: "text-sm text-ice-50/80 mt-0.5" }, updated ? `עודכן ב-${fmtDay(updated)}, לפני ${days} ימים` : "הדירה עוד לא נבדקה")),
+      stale && h("span", { className: "shrink-0 rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-sm text-amber-100" }, "בדיקה ישנה")),
+    h("div", { className: "grid grid-cols-3 gap-2" },
+      tile(`${okTotal}/${itemTotal}`, "פריטים תקינים", "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"),
+      tile(missingUnits, "יחידות חסרות", missingUnits ? "border-rose-400/40 bg-rose-400/10 text-rose-100" : "border-white/10 bg-white/[0.04] text-ice-50"),
+      tile(maintOpen, "בתחזוקה", maintOpen ? "border-amber-300/40 bg-amber-400/10 text-amber-100" : "border-white/10 bg-white/[0.04] text-ice-50")),
+    h("div", { className: "space-y-2" }, cats.map((cat, i) => {
+      const c = all[i];
+      const miss = shortages.filter((r) => r.category === cat).reduce((a, r) => a + (r.qty || 0), 0);
+      return h("button", {
+        key: cat, type: "button", onClick: () => onOpenRoom(cat),
+        className: "w-full min-h-[48px] rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 p-3 text-right",
+        "aria-label": `${CATEGORY_META[cat].label}: ${c.ok} תקינים מתוך ${c.total}, חסרות ${miss} יחידות`
+      },
+        h("div", { className: "flex items-center justify-between text-sm" },
+          h("span", { className: "font-semibold text-ice-50" }, CATEGORY_META[cat].label),
+          h("span", { className: miss ? "text-rose-200" : "text-emerald-200" }, miss ? `חסר ${miss}` : c.total && !c.pending ? "מלא" : `${c.ok}/${c.total} תקין`)),
+        h("div", { className: "mt-2 flex h-3 overflow-hidden rounded-full", "aria-hidden": "true" },
+          STATUS_BAR.map((b) => c[b.key] ? h("span", { key: b.key, className: b.cls, style: { width: `${c[b.key] / Math.max(c.total, 1) * 100}%` } }) : null)));
+    })),
+    h("div", { className: "flex flex-wrap gap-x-4 gap-y-1 text-sm text-ice-50/80", "aria-hidden": "true" },
+      STATUS_BAR.map((b) => h("span", { key: b.key, className: "inline-flex items-center gap-1.5" }, h("span", { className: `inline-block w-3 h-3 rounded-sm ${b.cls}` }), b.label))),
+    shortages.length > 0 && h("div", null,
+      h("h3", { className: "text-base font-semibold text-ice-50 mb-2" }, "מה חסר"),
+      h("ul", { className: "flex flex-wrap gap-2" }, [...shortages].sort((a, b) => b.qty - a.qty).slice(0, 8).map((r) =>
+        h("li", { key: `${r.category}:${r.key}`, className: "inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm text-rose-50" },
+          h(ItemIcon, { itemKey: r.key, size: 16 }), r.label, h("span", { className: "font-semibold tabular-nums" }, r.qty))))),
+    (maintText || photos.length > 0) && h("button", {
+      type: "button", onClick: () => onOpenRoom("maintenance"),
+      className: "w-full rounded-2xl border border-amber-300/30 bg-amber-400/[0.07] p-3 text-right focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300"
+    },
+      h("h3", { className: "text-base font-semibold text-amber-100" }, "תחזוקה"),
+      maintText && h("p", { className: "mt-1 text-sm text-ice-50/90 line-clamp-3" }, maintText),
+      photos.length > 0 && h("div", { className: "mt-2 flex gap-2" }, photos.slice(0, 4).map((ph, i) =>
+        h("img", { key: i, src: ph.src, alt: ph.note || `תמונת תחזוקה ${i + 1}`, loading: "lazy", className: "w-16 h-16 rounded-xl object-cover border border-white/10" })))));
+};
+const ApartmentWorkspace = ({ property, inspection, targets, onChange, onOpenRoom }) => {
   const overall = inspectionProgress(inspection);
   const issues = inspectionHasIssues(inspection);
   const completed = inspection == null ? void 0 : inspection.completed;
   const overallColor = completed ? "#34d399" : issues ? "#fbbf24" : "#5a8edb";
-  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-10 space-y-4 anim-fade-in" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-3xl glass-strong border border-white/10 overflow-hidden relative" }, /* @__PURE__ */ React.createElement("div", { className: "absolute -top-20 -left-20 w-64 h-64 rounded-full bg-copper-500/10 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-ice-700/20 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "relative p-5 flex items-center gap-4" }, /* @__PURE__ */ React.createElement(ProgressRing, { pct: overall, size: 92, stroke: 8, color: overallColor }), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.2em] text-copper-300/70 display" }, "Apartment"), /* @__PURE__ */ React.createElement("h1", { className: "display text-3xl text-ice-50 leading-tight truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap items-center gap-2 text-xs" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconUsers, { size: 12 }), " תפוסה ", property.capacity), /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconBed, { size: 12 }), " ", property.doubleBeds, " זוגיות"), completed && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-400/40" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }), " הושלמה"), !completed && issues && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/40" }, /* @__PURE__ */ React.createElement(IconAlert, { size: 12 }), " ליקויים"))))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.18em] text-ice-100/50 display mb-2 px-1" }, "Rooms"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 stagger" }, ROOMS.map((room) => {
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-10 space-y-4 anim-fade-in" }, React.createElement(ApartmentStatusBoard, { property, inspection, targets, onOpenRoom }), /* @__PURE__ */ React.createElement("div", { className: "rounded-3xl glass-strong border border-white/10 overflow-hidden relative" }, /* @__PURE__ */ React.createElement("div", { className: "absolute -top-20 -left-20 w-64 h-64 rounded-full bg-copper-500/10 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-ice-700/20 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "relative p-5 flex items-center gap-4" }, /* @__PURE__ */ React.createElement(ProgressRing, { pct: overall, size: 92, stroke: 8, color: overallColor }), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.2em] text-copper-300/70 display" }, "Apartment"), /* @__PURE__ */ React.createElement("h1", { className: "display text-3xl text-ice-50 leading-tight truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap items-center gap-2 text-xs" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconUsers, { size: 12 }), " תפוסה ", property.capacity), /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconBed, { size: 12 }), " ", property.doubleBeds, " זוגיות"), completed && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-400/40" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }), " הושלמה"), !completed && issues && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/40" }, /* @__PURE__ */ React.createElement(IconAlert, { size: 12 }), " ליקויים"))))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.18em] text-ice-100/50 display mb-2 px-1" }, "Rooms"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 stagger" }, ROOMS.map((room) => {
     const tone = ROOM_ACCENT[room.accent];
     const stat = roomCategoryProgress(inspection, room.key);
     return /* @__PURE__ */ React.createElement(
@@ -3473,6 +3550,7 @@ const App = () => {
     {
       property,
       inspection,
+      targets,
       onChange: handleInspectionChange,
       onOpenRoom: setSelectedRoom
     }
