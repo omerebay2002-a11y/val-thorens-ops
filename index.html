@@ -667,7 +667,32 @@ const IKEA_DEPARTMENTS = {
   bedsideLamp: "תאורה",
   bulbs: "תאורה",
   curtains: "טקסטיל",
-  vacuum: "ניקיון"
+  vacuum: "ניקיון",
+  // scene-only items (marked on room screens, not in the item lists)
+  towels: "טקסטיל",
+  handTowels: "טקסטיל",
+  bathmat: "טקסטיל",
+  kitchenTowels: "טקסטיל",
+  rug: "טקסטיל",
+  toiletBrush: "אמבטיה",
+  toaster: "מטבח קטן",
+  coffeeMachine: "מטבח קטן"
+};
+const EXTRA_ITEM_LABELS = {
+  towels: "מגבות",
+  handTowels: "מגבות ידיים",
+  bathmat: "שטיחון אמבטיה",
+  toiletBrush: "מברשת אסלה",
+  kitchenTowels: "מגבות מטבח",
+  spices: "תבלינים",
+  rug: "שטיח",
+  toaster: "טוסטר",
+  coffeeMachine: "מכונת קפה",
+  wifi: "WiFi",
+  safe: "כספת",
+  skiRack: "מתלה סקי",
+  iron: "מגהץ",
+  bootDryer: "מייבש נעליים"
 };
 const computeIkeaList = (aggregate) => {
   const byDept = {};
@@ -722,6 +747,26 @@ const computePropertyShortages = (property, inspection, targets) => {
         presentCount: v == null ? void 0 : v.presentCount,
         qty,
         isMultiplier: isCountable
+      });
+    });
+  });
+  // Items marked on the room screens that are not in the lists above (towels, rug, toaster...)
+  Object.keys(CATEGORY_META).forEach((category) => {
+    const known = new Set((ALL_ITEMS_BY_CATEGORY[category] || []).map((i) => i.key));
+    Object.entries(inspection[category] || {}).forEach(([key, v]) => {
+      if (known.has(key) || !v || (v.status !== "missing" && v.status !== "partial")) return;
+      const qty = computeShortage(v, 1, false);
+      if (qty <= 0) return;
+      out.push({
+        category,
+        key,
+        label: EXTRA_ITEM_LABELS[key] || key,
+        status: v.status,
+        note: v.note || "",
+        required: 1,
+        presentCount: v.presentCount,
+        qty,
+        isMultiplier: false
       });
     });
   });
