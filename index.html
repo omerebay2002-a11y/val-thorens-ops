@@ -667,7 +667,32 @@ const IKEA_DEPARTMENTS = {
   bedsideLamp: "תאורה",
   bulbs: "תאורה",
   curtains: "טקסטיל",
-  vacuum: "ניקיון"
+  vacuum: "ניקיון",
+  // scene-only items (marked on room screens, not in the item lists)
+  towels: "טקסטיל",
+  handTowels: "טקסטיל",
+  bathmat: "טקסטיל",
+  kitchenTowels: "טקסטיל",
+  rug: "טקסטיל",
+  toiletBrush: "אמבטיה",
+  toaster: "מטבח קטן",
+  coffeeMachine: "מטבח קטן"
+};
+const EXTRA_ITEM_LABELS = {
+  towels: "מגבות",
+  handTowels: "מגבות ידיים",
+  bathmat: "שטיחון אמבטיה",
+  toiletBrush: "מברשת אסלה",
+  kitchenTowels: "מגבות מטבח",
+  spices: "תבלינים",
+  rug: "שטיח",
+  toaster: "טוסטר",
+  coffeeMachine: "מכונת קפה",
+  wifi: "WiFi",
+  safe: "כספת",
+  skiRack: "מתלה סקי",
+  iron: "מגהץ",
+  bootDryer: "מייבש נעליים"
 };
 const computeIkeaList = (aggregate) => {
   const byDept = {};
@@ -700,18 +725,9 @@ const computePropertyShortages = (property, inspection, targets) => {
     items.forEach((item) => {
       var _a;
       const v = (_a = inspection[category]) == null ? void 0 : _a[item.key];
-      const hasTarget = targets && targets[targetKey(category, item.key)];
-      if (!hasTarget && (!v || v.status === "ok" || v.status === "pending")) return;
+      if (!v || v.status === "ok" || v.status === "pending") return;
       const { required, isCountable } = getItemRequired(item, cap, category, targets);
-      let qty;
-      if (hasTarget && isCountable) {
-        const present = Number(v == null ? void 0 : v.presentCount);
-        const safe = Number.isFinite(present) && present >= 0 ? present : 0;
-        qty = Math.max(0, required - safe);
-        if (qty <= 0) return;
-      } else {
-        qty = computeShortage(v, required, isCountable);
-      }
+      const qty = computeShortage(v, required, isCountable);
       out.push({
         category,
         key: item.key,
@@ -722,6 +738,26 @@ const computePropertyShortages = (property, inspection, targets) => {
         presentCount: v == null ? void 0 : v.presentCount,
         qty,
         isMultiplier: isCountable
+      });
+    });
+  });
+  // Items marked on the room screens that are not in the lists above (towels, rug, toaster...)
+  Object.keys(CATEGORY_META).forEach((category) => {
+    const known = new Set((ALL_ITEMS_BY_CATEGORY[category] || []).map((i) => i.key));
+    Object.entries(inspection[category] || {}).forEach(([key, v]) => {
+      if (known.has(key) || !v || (v.status !== "missing" && v.status !== "partial")) return;
+      const qty = computeShortage(v, 1, false);
+      if (qty <= 0) return;
+      out.push({
+        category,
+        key,
+        label: EXTRA_ITEM_LABELS[key] || key,
+        status: v.status,
+        note: v.note || "",
+        required: 1,
+        presentCount: v.presentCount,
+        qty,
+        isMultiplier: false
       });
     });
   });
@@ -2564,8 +2600,40 @@ const categoryCounts = (insp, cat) => {
   });
   return c;
 };
-const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => {
+const BoughtButton = ({ done, onClick, label }) => React.createElement("button", {
+  type: "button", disabled: done, onClick, "aria-label": label,
+  className: `shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] px-3 rounded-xl border text-sm font-semibold transition ${done ? "bg-emerald-400 border-emerald-400 text-night-950" : "border-emerald-400/50 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/20 active:scale-95"}`
+}, React.createElement(IconCheck, { size: 16, strokeWidth: 3 }), "נקנה");
+const BoughtToast = ({ toast, onUndo }) => toast ? React.createElement("div", {
+  role: "status", "aria-live": "polite",
+  className: "fixed bottom-4 inset-x-4 z-50 mx-auto max-w-md flex items-center justify-between gap-3 rounded-2xl border border-emerald-400/40 bg-night-900 px-4 py-3 text-sm text-ice-50 shadow-2xl"
+}, React.createElement("span", { className: "min-w-0 truncate" }, `סומן כנקנה · ${toast.propertyName} · ${toast.label}`),
+  React.createElement("button", { type: "button", onClick: onUndo, className: "shrink-0 min-h-[44px] px-3 rounded-lg font-semibold text-copper-300 hover:bg-white/[0.06]" }, "ביטול")) : null;
+const sameItemValue = (a, b) => !!a && !!b && a.status === b.status && (a.note || "") === (b.note || "") && (a.presentCount ?? null) === (b.presentCount ?? null) && (a.missingCount ?? null) === (b.missingCount ?? null);
+const boughtValue = (prev) => ({ status: "ok", note: (prev && prev.note) || "", presentCount: null, missingCount: null });
+const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom, onChange }) => {
   const h = React.createElement;
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const markBought = (r) => {
+    const prev = inspection && inspection[r.category] ? inspection[r.category][r.key] : void 0;
+    const written = boughtValue(prev);
+    onChange({ ...inspection, [r.category]: { ...inspection[r.category], [r.key]: written }, updatedAt: Date.now() });
+    clearTimeout(toastTimer.current);
+    setToast({ propertyName: property.name, label: r.label, category: r.category, key: r.key, prev, written });
+    toastTimer.current = setTimeout(() => setToast(null), 5e3);
+  };
+  const undoBought = () => {
+    if (!toast) return;
+    const current = inspection && inspection[toast.category] ? inspection[toast.category][toast.key] : void 0;
+    if (sameItemValue(current, toast.written)) {
+      const cat = { ...inspection[toast.category] };
+      if (toast.prev === void 0) delete cat[toast.key]; else cat[toast.key] = toast.prev;
+      onChange({ ...inspection, [toast.category]: cat, updatedAt: Date.now() });
+    }
+    clearTimeout(toastTimer.current);
+    setToast(null);
+  };
   const shortages = useMemo(() => computePropertyShortages(property, inspection, targets), [property, inspection, targets]);
   const updated = inspection && (inspection.updatedAt || inspection.completedAt);
   const days = updated ? Math.max(0, Math.floor((Date.now() - updated) / 864e5)) : null;
@@ -2610,9 +2678,11 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => 
       STATUS_BAR.map((b) => h("span", { key: b.key, className: "inline-flex items-center gap-1.5" }, h("span", { className: `inline-block w-3 h-3 rounded-sm ${b.cls}` }), b.label))),
     shortages.length > 0 && h("div", null,
       h("h3", { className: "text-base font-semibold text-ice-50 mb-2" }, "מה חסר"),
-      h("ul", { className: "flex flex-wrap gap-2" }, [...shortages].sort((a, b) => (b.qty || 0) - (a.qty || 0)).slice(0, 8).map((r) =>
-        h("li", { key: `${r.category}:${r.key}`, className: "inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm text-rose-50" },
-          h(ItemIcon, { itemKey: r.key, size: 16 }), r.label, h("span", { className: "font-semibold tabular-nums" }, r.qty))))),
+      h("ul", { className: "space-y-2" }, [...shortages].sort((a, b) => (b.qty || 0) - (a.qty || 0)).map((r) =>
+        h("li", { key: `${r.category}:${r.key}`, className: "flex items-center justify-between gap-2 rounded-2xl border border-rose-400/30 bg-rose-400/10 ps-3 pe-1.5 py-1.5 text-sm text-rose-50" },
+          h("span", { className: "inline-flex items-center gap-2 min-w-0" }, h(ItemIcon, { itemKey: r.key, size: 16 }), h("span", { className: "truncate" }, r.label), h("span", { className: "font-semibold tabular-nums" }, r.qty)),
+          h(BoughtButton, { done: false, onClick: () => markBought(r), label: `נקנה: ${r.label}` }))))),
+    h(BoughtToast, { toast, onUndo: undoBought }),
     (maintText || photos.length > 0) && h("button", {
       type: "button", onClick: () => onOpenRoom("maintenance"),
       className: "w-full rounded-2xl border border-amber-300/30 bg-amber-400/[0.07] p-3 text-right focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300"
@@ -2627,7 +2697,7 @@ const ApartmentWorkspace = ({ property, inspection, targets, onChange, onOpenRoo
   const issues = inspectionHasIssues(inspection);
   const completed = inspection == null ? void 0 : inspection.completed;
   const overallColor = completed ? "#34d399" : issues ? "#fbbf24" : "#5a8edb";
-  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-10 space-y-4 anim-fade-in" }, React.createElement(ApartmentStatusBoard, { property, inspection, targets, onOpenRoom }), /* @__PURE__ */ React.createElement("div", { className: "rounded-3xl glass-strong border border-white/10 overflow-hidden relative" }, /* @__PURE__ */ React.createElement("div", { className: "absolute -top-20 -left-20 w-64 h-64 rounded-full bg-copper-500/10 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-ice-700/20 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "relative p-5 flex items-center gap-4" }, /* @__PURE__ */ React.createElement(ProgressRing, { pct: overall, size: 92, stroke: 8, color: overallColor }), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.2em] text-copper-300/70 display" }, "Apartment"), /* @__PURE__ */ React.createElement("h1", { className: "display text-3xl text-ice-50 leading-tight truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap items-center gap-2 text-xs" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconUsers, { size: 12 }), " תפוסה ", property.capacity), /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconBed, { size: 12 }), " ", property.doubleBeds, " זוגיות"), completed && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-400/40" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }), " הושלמה"), !completed && issues && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/40" }, /* @__PURE__ */ React.createElement(IconAlert, { size: 12 }), " ליקויים"))))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.18em] text-ice-100/50 display mb-2 px-1" }, "Rooms"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 stagger" }, ROOMS.map((room) => {
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-10 space-y-4 anim-fade-in" }, React.createElement(ApartmentStatusBoard, { property, inspection, targets, onOpenRoom, onChange }), /* @__PURE__ */ React.createElement("div", { className: "rounded-3xl glass-strong border border-white/10 overflow-hidden relative" }, /* @__PURE__ */ React.createElement("div", { className: "absolute -top-20 -left-20 w-64 h-64 rounded-full bg-copper-500/10 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-ice-700/20 blur-3xl" }), /* @__PURE__ */ React.createElement("div", { className: "relative p-5 flex items-center gap-4" }, /* @__PURE__ */ React.createElement(ProgressRing, { pct: overall, size: 92, stroke: 8, color: overallColor }), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.2em] text-copper-300/70 display" }, "Apartment"), /* @__PURE__ */ React.createElement("h1", { className: "display text-3xl text-ice-50 leading-tight truncate" }, property.name), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap items-center gap-2 text-xs" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconUsers, { size: 12 }), " תפוסה ", property.capacity), /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-ice-100/80 border border-white/10" }, /* @__PURE__ */ React.createElement(IconBed, { size: 12 }), " ", property.doubleBeds, " זוגיות"), completed && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-400/40" }, /* @__PURE__ */ React.createElement(IconCheck, { size: 12 }), " הושלמה"), !completed && issues && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 border border-amber-400/40" }, /* @__PURE__ */ React.createElement(IconAlert, { size: 12 }), " ליקויים"))))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-[11px] uppercase tracking-[0.18em] text-ice-100/50 display mb-2 px-1" }, "Rooms"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 stagger" }, ROOMS.map((room) => {
     const tone = ROOM_ACCENT[room.accent];
     const stat = roomCategoryProgress(inspection, room.key);
     return /* @__PURE__ */ React.createElement(
@@ -3155,6 +3225,8 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
   const byProperty = useMemo(() => properties.map((p) => ({ property: p, list: computePropertyShortages(p, inspections[p.id], targets) })).filter((x) => x.list.length > 0), [properties, inspections, targets]);
   const ikea = useMemo(() => computeIkeaList(aggregate), [aggregate]);
   const [pending, setPending] = useState({});
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
   const markResolved = useCallback((propertyId, category, itemKey) => {
     setInspections((prev) => {
       var _a, _b;
@@ -3172,12 +3244,31 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
       };
     });
   }, [setInspections]);
+  const undoBought = () => {
+    if (!toast) return;
+    const t = toast;
+    setInspections((prev) => {
+      const current = prev[t.propertyId] || createBlankInspection();
+      if (!sameItemValue((current[t.category] || {})[t.itemKey], t.written)) return prev;
+      const cat = { ...current[t.category] };
+      if (t.prev === void 0) delete cat[t.itemKey]; else cat[t.itemKey] = t.prev;
+      return { ...prev, [t.propertyId]: { ...current, [t.category]: cat, updatedAt: Date.now() } };
+    });
+    clearTimeout(toastTimer.current);
+    setToast(null);
+  };
   const toggleRow = (propertyId, category, itemKey) => {
     const rowKey = `${category}:${itemKey}:${propertyId}`;
     if (pending[rowKey]) return;
     setPending((p) => ({ ...p, [rowKey]: true }));
+    const prevValue = inspections[propertyId] && inspections[propertyId][category] ? inspections[propertyId][category][itemKey] : void 0;
+    const prop = properties.find((x) => x.id === propertyId);
+    const def = findItemDef(category, itemKey);
     setTimeout(() => {
       markResolved(propertyId, category, itemKey);
+      clearTimeout(toastTimer.current);
+      setToast({ propertyId, category, itemKey, prev: prevValue, written: boughtValue(prevValue), propertyName: prop ? prop.name : propertyId, label: def ? def.label : EXTRA_ITEM_LABELS[itemKey] || itemKey });
+      toastTimer.current = setTimeout(() => setToast(null), 5e3);
       setPending((p) => {
         const n = { ...p };
         delete n[rowKey];
@@ -3312,16 +3403,7 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
     return /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: `shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${tone.bg} border ${tone.ring}` }, /* @__PURE__ */ React.createElement("span", { className: "text-[9px] leading-none text-ice-100/70" }, "לקנות"), /* @__PURE__ */ React.createElement("span", { className: `display text-xl leading-tight ${tone.text}` }, row.totalQty || "·")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-ice-50 truncate" }, row.label), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 text-xs text-ice-100/50 mt-0.5" }, /* @__PURE__ */ React.createElement("span", { className: `px-1.5 py-0.5 rounded ${tone.bg} ${tone.text} border ${tone.ring}` }, meta.label), /* @__PURE__ */ React.createElement("span", null, row.breakdown.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "border-t border-white/5 bg-night-950/30 px-3 py-2 space-y-1" }, row.breakdown.map((b, i) => {
       const rowKey = `${row.category}:${row.itemKey}:${b.propertyId}`;
       const done = !!pending[rowKey];
-      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-start gap-2 text-sm" }, /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          type: "button",
-          disabled: done,
-          onClick: () => toggleRow(b.propertyId, row.category, row.itemKey),
-          "aria-label": `סמן כהושלם עבור ${b.propertyName}`,
-          className: `shrink-0 mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition ${done ? "bg-emerald-400 border-emerald-400" : "border-white/25 hover:border-emerald-400/60 active:scale-90"}`
-        },
-        done && /* @__PURE__ */ React.createElement(IconCheck, { size: 12, strokeWidth: 3, className: "text-night-950" })
+      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-start gap-2 text-sm" }, /* @__PURE__ */ React.createElement(BoughtButton, { done, onClick: () => toggleRow(b.propertyId, row.category, row.itemKey), label: `נקנה: ${row.label}, ${b.propertyName}` }
       ), /* @__PURE__ */ React.createElement("span", { className: `font-semibold truncate transition ${done ? "text-ice-100/40 line-through" : "text-ice-100/80"}` }, b.propertyName), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 text-ice-100/30" }, "·"), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold transition ${done ? "text-emerald-400/70 line-through" : b.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, b.qty > 0 ? `${b.qty} יח׳` : b.status === "partial" ? "חלקי" : "חסר"), b.note && !done && /* @__PURE__ */ React.createElement("span", { className: "text-ice-100/50 text-xs truncate" }, "[", b.note, "]"));
     })));
   })) : groupBy === "ikea" ? /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, ikea.departments.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-6 text-center text-sm text-ice-100/60" }, "אין פריטים חסרים שנמכרים באיקאה כרגע."), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, ikea.departments.map(({ dept, items, totalQty: deptQty }) => /* @__PURE__ */ React.createElement("div", { key: dept, className: "rounded-2xl glass border border-white/10 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "p-3 flex items-center gap-3 border-b border-white/5 bg-night-950/30" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-sky-400/15 border border-sky-400/30 text-sky-300 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(IconCart, { size: 18 })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display font-bold text-ice-50 truncate" }, dept), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-ice-100/50" }, items.length, " פריטים")), /* @__PURE__ */ React.createElement("div", { className: "shrink-0 px-2 py-1 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/30 text-sm font-extrabold" }, deptQty, " יח׳")), /* @__PURE__ */ React.createElement("div", { className: "p-2 space-y-1" }, items.map((row) => /* @__PURE__ */ React.createElement("div", { key: `${row.category}:${row.itemKey}`, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-ice-100 flex-1 truncate" }, row.label), /* @__PURE__ */ React.createElement("span", { className: "shrink-0 font-bold text-rose-300" }, row.totalQty > 0 ? `${row.totalQty} יח׳` : "לבדוק"))))))), ikea.excluded.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-amber-400/20 p-3 text-sm text-ice-100/60" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-amber-300" }, "לא נמכר באיקאה: "), ikea.excluded.join(", "))) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2 stagger" }, byProperty.map(({ property, list }) => {
@@ -3331,19 +3413,10 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
       const tone = ROOM_ACCENT[meta.accent === "orange" ? "copper" : meta.accent] || ROOM_ACCENT.copper;
       const rowKey = `${it.category}:${it.key}:${property.id}`;
       const done = !!pending[rowKey];
-      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          type: "button",
-          disabled: done,
-          onClick: () => toggleRow(property.id, it.category, it.key),
-          "aria-label": `סמן כהושלם: ${it.label}`,
-          className: `shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition ${done ? "bg-emerald-400 border-emerald-400" : "border-white/25 hover:border-emerald-400/60 active:scale-90"}`
-        },
-        done && /* @__PURE__ */ React.createElement(IconCheck, { size: 12, strokeWidth: 3, className: "text-night-950" })
+      return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]" }, /* @__PURE__ */ React.createElement(BoughtButton, { done, onClick: () => toggleRow(property.id, it.category, it.key), label: `נקנה: ${it.label}, ${property.name}` }
       ), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 px-1.5 py-0.5 text-[10px] rounded ${tone.bg} ${tone.text} border ${tone.ring} font-semibold` }, meta.label), /* @__PURE__ */ React.createElement("span", { className: `font-semibold flex-1 truncate transition ${done ? "text-ice-100/40 line-through" : "text-ice-100"}` }, it.label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 font-bold transition ${done ? "text-emerald-400/70 line-through" : it.qty > 0 ? "text-rose-300" : "text-amber-300"}` }, it.qty > 0 ? `${it.qty} יח׳` : it.status === "partial" ? "חלקי" : "חסר"), it.note && !done && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-ice-100/50 truncate hidden sm:inline" }, "[", it.note, "]"));
     })));
-  })));
+  })), React.createElement(BoughtToast, { toast, onUndo: undoBought }));
 };
 const ConnectModal = ({ onClose }) => {
   const [qrUrl, setQrUrl] = useState(null);
