@@ -2609,6 +2609,7 @@ const BoughtToast = ({ toast, onUndo }) => toast ? React.createElement("div", {
   className: "fixed bottom-4 inset-x-4 z-50 mx-auto max-w-md flex items-center justify-between gap-3 rounded-2xl border border-emerald-400/40 bg-night-900 px-4 py-3 text-sm text-ice-50 shadow-2xl"
 }, React.createElement("span", { className: "min-w-0 truncate" }, `סומן כנקנה · ${toast.propertyName} · ${toast.label}`),
   React.createElement("button", { type: "button", onClick: onUndo, className: "shrink-0 min-h-[44px] px-3 rounded-lg font-semibold text-copper-300 hover:bg-white/[0.06]" }, "ביטול")) : null;
+const sameItemValue = (a, b) => !!a && !!b && a.status === b.status && (a.note || "") === (b.note || "") && (a.presentCount ?? null) === (b.presentCount ?? null) && (a.missingCount ?? null) === (b.missingCount ?? null);
 const boughtValue = (prev) => ({ status: "ok", note: (prev && prev.note) || "", presentCount: null, missingCount: null });
 const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom, onChange }) => {
   const h = React.createElement;
@@ -2616,16 +2617,20 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom, onCha
   const toastTimer = useRef(null);
   const markBought = (r) => {
     const prev = inspection && inspection[r.category] ? inspection[r.category][r.key] : void 0;
-    onChange({ ...inspection, [r.category]: { ...inspection[r.category], [r.key]: boughtValue(prev) }, updatedAt: Date.now() });
+    const written = boughtValue(prev);
+    onChange({ ...inspection, [r.category]: { ...inspection[r.category], [r.key]: written }, updatedAt: Date.now() });
     clearTimeout(toastTimer.current);
-    setToast({ propertyName: property.name, label: r.label, category: r.category, key: r.key, prev });
+    setToast({ propertyName: property.name, label: r.label, category: r.category, key: r.key, prev, written });
     toastTimer.current = setTimeout(() => setToast(null), 5e3);
   };
   const undoBought = () => {
     if (!toast) return;
-    const cat = { ...inspection[toast.category] };
-    if (toast.prev === void 0) delete cat[toast.key]; else cat[toast.key] = toast.prev;
-    onChange({ ...inspection, [toast.category]: cat, updatedAt: Date.now() });
+    const current = inspection && inspection[toast.category] ? inspection[toast.category][toast.key] : void 0;
+    if (sameItemValue(current, toast.written)) {
+      const cat = { ...inspection[toast.category] };
+      if (toast.prev === void 0) delete cat[toast.key]; else cat[toast.key] = toast.prev;
+      onChange({ ...inspection, [toast.category]: cat, updatedAt: Date.now() });
+    }
     clearTimeout(toastTimer.current);
     setToast(null);
   };
@@ -3244,6 +3249,7 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
     const t = toast;
     setInspections((prev) => {
       const current = prev[t.propertyId] || createBlankInspection();
+      if (!sameItemValue((current[t.category] || {})[t.itemKey], t.written)) return prev;
       const cat = { ...current[t.category] };
       if (t.prev === void 0) delete cat[t.itemKey]; else cat[t.itemKey] = t.prev;
       return { ...prev, [t.propertyId]: { ...current, [t.category]: cat, updatedAt: Date.now() } };
@@ -3261,7 +3267,7 @@ const ShoppingView = ({ properties, inspections, setInspections, targets, setTar
     setTimeout(() => {
       markResolved(propertyId, category, itemKey);
       clearTimeout(toastTimer.current);
-      setToast({ propertyId, category, itemKey, prev: prevValue, propertyName: prop ? prop.name : propertyId, label: def ? def.label : EXTRA_ITEM_LABELS[itemKey] || itemKey });
+      setToast({ propertyId, category, itemKey, prev: prevValue, written: boughtValue(prevValue), propertyName: prop ? prop.name : propertyId, label: def ? def.label : EXTRA_ITEM_LABELS[itemKey] || itemKey });
       toastTimer.current = setTimeout(() => setToast(null), 5e3);
       setPending((p) => {
         const n = { ...p };
