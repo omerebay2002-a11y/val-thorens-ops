@@ -247,6 +247,34 @@ const withAddedProperties = (list) => {
   const missing = ADDED_PROPERTIES.filter((p) => !have.has(p.id));
   return missing.length ? [...list, ...missing] : list;
 };
+// Frank's repair list (read-only snapshot, counts only, no task titles). Source: vt-repairs.vercel.app, retrieved 2026-11-09. NOT live.
+// Explicit map: Frank's apartment name -> apartment id here. Frank's tasks are never copied into maintenance data.
+const FRANK_SOURCE_URL = "https://vt-repairs.vercel.app/";
+const FRANK_COUNTS = {
+  "cime-de-caron-1304": 1, // Frank: Cime de Caron 1304
+  "cusco-e18": 1, // Frank: Cuzco E18
+  "cusco-h26": 6, // Frank: Cuzco H26 (here: Cuzco 26H)
+  "cusco-k4": 1, // Frank: Cuzco K4 (here: Cuzco 4K)
+  "dome-de-polset-315": 4, // Frank: Dôme 315 (here: Dome 315)
+  "joker-16": 1, // Frank: Joker 16
+  "joker-c3": 8, // Frank: Joker C3
+  "joker-c8": 5, // Frank: Joker C8
+  "la-vanoise-473": 3, // Frank: La Vanoise 473
+  "lauzieres-612": 1, // Frank: Lauzières 612 (here: L'Auzière 612)
+  "machu-603": 4, // Frank: Machu 603
+  "machu-801": 8, // Frank: Machu 801
+  "neves-194": 3, // Frank: Neves 194
+  "olympiades-112": 4, // Frank: Olympiades 112
+  "pichu-408": 1, // Frank: Pichu 408
+  "le-serac-j10": 5, // Frank: Sérac J10 (here: Le Sérac J10)
+  "le-serac-k10": 3 // Frank: Sérac K10 (here: Le Sérac K10)
+};
+const frankLabel = (n) => `פרנק: ${n} משימות · צילום מצב 9.11, לא חי`;
+const FrankLink = ({ aptId, className }) => {
+  const n = FRANK_COUNTS[aptId];
+  if (!n) return null;
+  return React.createElement("a", { href: FRANK_SOURCE_URL, target: "_blank", rel: "noopener", onClick: (e) => e.stopPropagation(), className: `inline-flex items-center min-h-[32px] rounded-full border border-sky-400/30 bg-sky-400/10 px-2.5 py-1 text-[13px] text-sky-100 hover:bg-sky-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 ${className || ""}` }, frankLabel(n));
+};
 const INITIAL_PROPERTIES = [
   { id: "altineige-28", name: "Altineige 2", building: "altineige", capacity: 5, doubleBeds: 0, code: "6095" },
   { id: "altineige-203", name: "Altineige 203", building: "altineige", capacity: 5, doubleBeds: 0, code: "5124", codeNote: "Key Box in Lobby" },
@@ -864,6 +892,13 @@ const STATUS_VISUAL = {
   missing: { ring: "border-rose-400/70", bg: "bg-rose-500/15", text: "text-rose-200", label: "חסר", dot: "bg-rose-400" }
 };
 const cycleStatus = (s) => s === "pending" ? "ok" : s === "ok" ? "partial" : s === "partial" ? "missing" : "pending";
+// Single definition of "open maintenance": renovations text is non-empty OR there are maintenance photos.
+// Used by the room progress, the "תחזוקה פתוחה" tile/filter and the maintenance view, so the counts always match.
+const hasOpenMaintenance = (insp) => {
+  const m = insp && insp.maintenance;
+  if (!m) return false;
+  return (((typeof m.renovations === "string" ? m.renovations.trim().length : 0)) > 0) || !!(m.photos && m.photos.length > 0);
+};
 const roomCategoryProgress = (insp, key) => {
   var _a, _b, _c, _d, _e;
   if (!insp) return { pct: 0, total: 0, done: 0, issues: 0 };
@@ -891,7 +926,7 @@ const roomCategoryProgress = (insp, key) => {
     return { pct: items.length ? Math.round(done / items.length * 100) : 0, total: items.length, done, issues };
   }
   if (key === "maintenance") {
-    const has = (((_c = (_b = (_a = insp.maintenance) == null ? void 0 : _a.renovations) == null ? void 0 : _b.trim()) == null ? void 0 : _c.length) || 0) > 0 || ((_e = (_d = insp.maintenance) == null ? void 0 : _d.photos) == null ? void 0 : _e.length) > 0;
+    const has = hasOpenMaintenance(insp);
     return { pct: has ? 100 : 0, total: 1, done: has ? 1 : 0, issues: 0 };
   }
   if (key === "exit") {
@@ -2704,7 +2739,7 @@ const aptSummary = (property, inspection, targets) => {
   const days = updated ? Math.max(0, Math.floor((Date.now() - updated) / 864e5)) : null;
   return { sum, missingUnits, maintOpen, updated, days, stale: days == null || days > 30, checked: !!updated, inspected };
 };
-const AptCard = ({ property, inspection, targets, onClick, index }) => {
+const AptCardInner = ({ property, inspection, targets, onClick, index }) => {
   const h = React.createElement;
   const progress = inspectionProgress(inspection);
   const issues = inspectionHasIssues(inspection);
@@ -2730,6 +2765,10 @@ const AptCard = ({ property, inspection, targets, onClick, index }) => {
       s.missingUnits > 0 && h("span", { className: "rounded-full border border-rose-400/40 bg-rose-400/10 px-2 py-0.5 text-rose-100" }, "חסר ", s.missingUnits),
       s.maintOpen > 0 && h("span", { className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-amber-100" }, "תחזוקה")),
     h("div", { className: `text-[13px] ${s.stale ? "text-amber-200" : "text-ice-50/70"}` }, s.checked ? `נבדקה ${fmtDay(s.updated)}` : s.inspected ? "תאריך בדיקה לא ידוע" : "עוד לא נבדקה"));
+};
+const AptCard = (props) => {
+  if (!FRANK_COUNTS[props.property.id]) return React.createElement(AptCardInner, props);
+  return React.createElement("div", { className: "flex flex-col gap-1" }, React.createElement(AptCardInner, props), React.createElement(FrankLink, { aptId: props.property.id, className: "self-start" }));
 };
 const BuildingHeader = ({ building, count, done, issues, expanded, onToggle }) => {
   const tone = ROOM_ACCENT[building.accent] || ROOM_ACCENT.copper;
@@ -2796,6 +2835,36 @@ const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) 
     ))));
   }));
 };
+const PhotoThumb = ({ photo }) => {
+  const [failed, setFailed] = useState(false);
+  const box = "shrink-0 w-16 h-16 rounded-lg border border-white/10 bg-white/[0.06] overflow-hidden flex items-center justify-center text-[11px] text-ice-50/60 text-center leading-tight";
+  if (photo.type === "video") return React.createElement("div", { className: box }, "וידאו");
+  if (!photo.src) return React.createElement("div", { className: box, role: "img", "aria-label": "אין קובץ תמונה" }, "אין קובץ תמונה");
+  if (failed) return React.createElement("div", { className: box, role: "img", "aria-label": "התמונה לא נטענה" }, "התמונה לא נטענה");
+  return React.createElement("div", { className: box }, React.createElement("img", { src: photo.src, alt: photo.note || "תמונת תחזוקה", loading: "lazy", className: "w-full h-full object-cover", onError: () => setFailed(true) }));
+};
+const MaintenanceView = ({ properties, inspections, onSelect }) => {
+  const items = properties.filter((p) => hasOpenMaintenance(inspections[p.id]));
+  if (items.length === 0) return React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50" }, "אין דירות עם תחזוקה פתוחה");
+  return React.createElement("div", { className: "space-y-3 pb-10" }, React.createElement("p", { className: "text-[13px] text-ice-50/75 px-1" }, "תצוגת קריאה בלבד. התאריך הוא של הבדיקה האחרונה בדירה, לא של התקלה."),
+    items.map((p) => {
+      const ins = inspections[p.id] || {};
+      const m = ins.maintenance || {};
+      const text = typeof m.renovations === "string" ? m.renovations.trim() : "";
+      const photos = normalizePhotos(m.photos);
+      const ts = ins.updatedAt || ins.completedAt;
+      const b = BUILDINGS.find((x) => x.id === p.building);
+      return React.createElement("div", { key: p.id, className: "rounded-2xl glass border border-amber-300/30 p-3 flex flex-col gap-2" },
+        React.createElement("button", { type: "button", onClick: () => onSelect(p.id), className: "text-right flex flex-col gap-2 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 rounded-xl" },
+          React.createElement("div", { className: "flex items-baseline justify-between gap-2" },
+            React.createElement("span", { className: "text-base font-semibold text-ice-50" }, p.name),
+            b && React.createElement("span", { className: "text-[13px] text-ice-50/65" }, b.short)),
+          text && React.createElement("div", { className: "text-sm text-ice-50/90 whitespace-pre-wrap" }, text),
+          photos.length > 0 && React.createElement("div", { className: "flex flex-wrap gap-2" }, photos.map((ph, i) => React.createElement(PhotoThumb, { key: i, photo: ph }))),
+          React.createElement("div", { className: "text-[13px] text-ice-50/65" }, ts ? `בדיקה עודכנה: ${fmtDay(ts)}` : "בדיקה עודכנה: תאריך לא ידוע")),
+        React.createElement(FrankLink, { aptId: p.id, className: "self-start" }));
+    }));
+};
 const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSelect }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -2807,10 +2876,10 @@ const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSele
       if (filter === "done" && !(ins == null ? void 0 : ins.completed)) return false;
       if (filter === "pending" && (ins == null ? void 0 : ins.completed)) return false;
       if (filter === "issues" && !inspectionHasIssues(ins)) return false;
-      if (filter === "buy" || filter === "maint" || filter === "stale") {
+      if (filter === "maint" && !hasOpenMaintenance(ins)) return false;
+      if (filter === "buy" || filter === "stale") {
         const sm = aptSummary(p, ins, targets);
         if (filter === "buy" && !sm.missingUnits) return false;
-        if (filter === "maint" && !sm.maintOpen) return false;
         if (filter === "stale" && !sm.stale) return false;
       }
       return true;
@@ -2828,7 +2897,7 @@ const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSele
     properties.forEach((p) => {
       const sm = aptSummary(p, inspections[p.id], targets);
       if (sm.missingUnits) { buyApts += 1; buyUnits += sm.missingUnits; }
-      if (sm.maintOpen) maint += 1;
+      if (hasOpenMaintenance(inspections[p.id])) maint += 1;
       if (sm.stale) stale += 1;
     });
     return { total: properties.length, done, issues, inProg, buyApts, buyUnits, maint, stale };
@@ -2869,7 +2938,7 @@ const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSele
     },
     f.icon,
     f.label
-  ))), filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50" }, "לא נמצאו דירות תואמות") : /* @__PURE__ */ React.createElement(BuildingGroups, { properties: filtered, inspections, targets, onSelect: handleSelect, search })));
+  ))), filter === "maint" ? React.createElement(MaintenanceView, { properties: filtered, inspections, onSelect: handleSelect }) : filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-10 text-center text-ice-100/50" }, "לא נמצאו דירות תואמות") : /* @__PURE__ */ React.createElement(BuildingGroups, { properties: filtered, inspections, targets, onSelect: handleSelect, search })));
 };
 const CloudSyncCard = ({ syncStatus }) => /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl glass border border-white/10 p-4 space-y-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-xl" }, "☁️"), /* @__PURE__ */ React.createElement("h2", { className: "display text-xl text-ice-50" }, "סנכרון ענן")), /* @__PURE__ */ React.createElement("span", { className: `text-xs font-bold px-2 py-1 rounded-full ${syncStatus === "ok" ? "bg-emerald-500/20 text-emerald-300" : syncStatus === "syncing" ? "bg-amber-500/20   text-amber-300" : "bg-rose-500/20    text-rose-300"}` }, syncStatus === "ok" ? "● מסונכרן" : syncStatus === "syncing" ? "◌ מסנכרן…" : "✕ שגיאת רשת")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-ice-100/60" }, "כל הנתונים נשמרים אוטומטית בענן ומשותפים בין כולם. כל שינוי שאת/ה עושה מופיע אצל הבוסים שלך תוך 15 שניות."));
 const SetupView = ({ properties, setProperties, inspections, setInspections, syncStatus }) => {
