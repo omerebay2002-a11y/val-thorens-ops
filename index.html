@@ -202,8 +202,6 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.fog.min.js"></script>
 
 <script>
 const { useState, useEffect, useMemo, useRef, useCallback, Fragment } = React;
@@ -791,6 +789,57 @@ const uploadToCloudinary = async (blob) => {
 const compressImage = async (file) => {
   const blob = await compressFile(file);
   return await uploadToCloudinary(blob);
+};
+// Stable upload: retries network/5xx errors; images fall back to an in-database copy when the
+// media account refuses (it is migrated to the media account later by migrateBase64Photos).
+const MEDIA_MAX_VIDEO_MB = 100;
+const blobToDataUrl = (blob) => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(r.result);
+  r.onerror = rej;
+  r.readAsDataURL(blob);
+});
+const cloudinaryUpload = async (blob, kind) => {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const fd = new FormData();
+      fd.append("file", blob);
+      fd.append("upload_preset", CLOUDINARY.preset);
+      const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/${kind}/upload`, { method: "POST", body: fd });
+      if (r.ok) return (await r.json()).secure_url;
+      lastErr = new Error("cloudinary " + r.status);
+      lastErr.status = r.status;
+      if (r.status < 500) break;
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise((res) => setTimeout(res, 1000 * (attempt + 1) * 2));
+  }
+  throw lastErr;
+};
+const uploadMedia = async (file) => {
+  const isVideo = (file.type || "").startsWith("video/");
+  if (isVideo) {
+    if (file.size > MEDIA_MAX_VIDEO_MB * 1024 * 1024) throw new Error(`הסרטון גדול מ-${MEDIA_MAX_VIDEO_MB}MB`);
+    try {
+      return { src: await cloudinaryUpload(file, "video"), note: "", type: "video" };
+    } catch (e) {
+      throw new Error(e && e.status === 400 ? "חשבון המדיה חוסם סרטונים כרגע" : "בעיית רשת, נסו שוב");
+    }
+  }
+  let blob;
+  try {
+    blob = await compressFile(file);
+  } catch (e) {
+    blob = file;
+  }
+  try {
+    return { src: await cloudinaryUpload(blob, "image"), note: "", type: "image" };
+  } catch (e) {
+    if (blob === file) throw e;
+    return { src: await blobToDataUrl(blob), note: "", type: "image" };
+  }
 };
 const ROOMS = [
   { key: "kitchen", label: "מטבח", subtitle: "כלי אוכל וציוד", accent: "copper", glyph: "🍳" },
@@ -2370,23 +2419,36 @@ const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
     }
   )), sheet);
 };
-const normalizePhotos = (photos) => (photos || []).map((p) => typeof p === "string" ? { src: p, note: "" } : p && typeof p === "object" ? { src: p.src || "", note: p.note || "" } : null).filter(Boolean);
+const normalizePhotos = (photos) => (photos || []).map((p) => typeof p === "string" ? { src: p, note: "" } : p && typeof p === "object" ? { src: p.src || "", note: p.note || "", type: p.type === "video" ? "video" : "image" } : null).filter(Boolean);
 const MaintenancePanel = ({ inspection, onChange }) => {
   const fileInputRef = useRef(null);
+  const latestRef = useRef(inspection);
+  latestRef.current = inspection;
+  const [uploadState, setUploadState] = useState(null);
   const update = (m) => onChange({ ...inspection, maintenance: m, updatedAt: Date.now() });
   const photos = normalizePhotos(inspection.maintenance.photos);
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files || []);
+    e.target.value = "";
     if (!files.length) return;
-    try {
-      const newPhotos = await Promise.all(files.map(async (f) => ({ src: await compressImage(f), note: "" })));
-      update({ ...inspection.maintenance, photos: [...photos, ...newPhotos] });
-    } catch (err) {
-      console.error(err);
-      alert("טעינת התמונה נכשלה.");
-    } finally {
-      e.target.value = "";
+    let ok = 0;
+    const failed = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadState({ busy: true, text: `מעלה ${i + 1} מתוך ${files.length}…` });
+      try {
+        const item = await uploadMedia(files[i]);
+        const cur = latestRef.current;
+        const curPhotos = normalizePhotos(cur.maintenance && cur.maintenance.photos);
+        const next = { ...cur, maintenance: { ...cur.maintenance, photos: [...curPhotos, item] }, updatedAt: Date.now() };
+        latestRef.current = next;
+        onChange(next);
+        ok += 1;
+      } catch (err) {
+        console.error(err);
+        failed.push(files[i].name + (err && err.message && !String(err.message).startsWith("cloudinary") ? ` (${err.message})` : ""));
+      }
     }
+    setUploadState(failed.length ? { busy: false, error: true, text: `עלו ${ok}. לא עלו ${failed.length}: ${failed.join(", ")}` } : { busy: false, text: `עלו ${ok} בהצלחה` });
   };
   const removePhoto = (idx) => update({ ...inspection.maintenance, photos: photos.filter((_, i) => i !== idx) });
   const setPhotoNote = (idx, note) => update({ ...inspection.maintenance, photos: photos.map((p, i) => i === idx ? { ...p, note } : p) });
@@ -2404,8 +2466,7 @@ const MaintenancePanel = ({ inspection, onChange }) => {
     {
       ref: fileInputRef,
       type: "file",
-      accept: "image/*",
-      capture: "environment",
+      accept: "image/*,video/*",
       multiple: true,
       onChange: handleFiles,
       className: "hidden"
@@ -2421,8 +2482,8 @@ const MaintenancePanel = ({ inspection, onChange }) => {
       className: "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-rose-400/40 text-rose-200 font-semibold hover:border-rose-400 hover:bg-rose-500/10 transition"
     },
     /* @__PURE__ */ React.createElement(IconCamera, { size: 18 }),
-    " הוסף תמונות נזק / שיפוץ"
-  ), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mt-3 stagger" }, photos.map((photo, idx) => /* @__PURE__ */ React.createElement("div", { key: idx, className: "rounded-xl overflow-hidden border border-white/10 bg-night-950/40" }, /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ React.createElement("img", { src: photo.src, alt: `damage-${idx}`, className: "w-full h-32 object-cover" }), /* @__PURE__ */ React.createElement(
+    uploadState && uploadState.busy ? uploadState.text : " הוסף תמונות או סרטונים"
+  ), uploadState && !uploadState.busy && React.createElement("p", { role: "status", className: `mt-2 text-sm ${uploadState.error ? "text-rose-200" : "text-emerald-200"}` }, uploadState.text), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mt-3 stagger" }, photos.map((photo, idx) => /* @__PURE__ */ React.createElement("div", { key: idx, className: "rounded-xl overflow-hidden border border-white/10 bg-night-950/40" }, /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ (photo.type === "video" ? React.createElement("video", { src: photo.src, controls: true, preload: "metadata", playsInline: true, className: "w-full h-32 object-cover bg-black" }) : React.createElement("img", { src: photo.src, alt: photo.note || `תמונת תחזוקה ${idx + 1}`, className: "w-full h-32 object-cover" })), /* @__PURE__ */ React.createElement(
     "button",
     {
       type: "button",
@@ -2507,8 +2568,8 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => 
   const h = React.createElement;
   const shortages = useMemo(() => computePropertyShortages(property, inspection, targets), [property, inspection, targets]);
   const updated = inspection && (inspection.updatedAt || inspection.completedAt);
-  const days = updated ? Math.floor((Date.now() - updated) / 864e5) : null;
-  const stale = days != null && days > 30;
+  const days = updated ? Math.max(0, Math.floor((Date.now() - updated) / 864e5)) : null;
+  const stale = days == null || days > 30;
   const cats = Object.keys(CATEGORY_META);
   const all = cats.map((c) => categoryCounts(inspection, c));
   const okTotal = all.reduce((a, c) => a + c.ok, 0);
@@ -2525,7 +2586,7 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => 
     h("div", { className: "flex items-start justify-between gap-3" },
       h("div", null,
         h("h2", { className: "text-lg font-semibold text-ice-50" }, "מצב הדירה"),
-        h("p", { className: "text-sm text-ice-50/80 mt-0.5" }, updated ? `עודכן ב-${fmtDay(updated)}, לפני ${days} ימים` : "הדירה עוד לא נבדקה")),
+        h("p", { className: "text-sm text-ice-50/80 mt-0.5" }, updated ? `עודכן ב-${fmtDay(updated)}, לפני ${days} ימים` : "אין תאריך בדיקה")),
       stale && h("span", { className: "shrink-0 rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-sm text-amber-100" }, "בדיקה ישנה")),
     h("div", { className: "grid grid-cols-3 gap-2" },
       tile(`${okTotal}/${itemTotal}`, "פריטים תקינים", "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"),
@@ -2549,7 +2610,7 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => 
       STATUS_BAR.map((b) => h("span", { key: b.key, className: "inline-flex items-center gap-1.5" }, h("span", { className: `inline-block w-3 h-3 rounded-sm ${b.cls}` }), b.label))),
     shortages.length > 0 && h("div", null,
       h("h3", { className: "text-base font-semibold text-ice-50 mb-2" }, "מה חסר"),
-      h("ul", { className: "flex flex-wrap gap-2" }, [...shortages].sort((a, b) => b.qty - a.qty).slice(0, 8).map((r) =>
+      h("ul", { className: "flex flex-wrap gap-2" }, [...shortages].sort((a, b) => (b.qty || 0) - (a.qty || 0)).slice(0, 8).map((r) =>
         h("li", { key: `${r.category}:${r.key}`, className: "inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm text-rose-50" },
           h(ItemIcon, { itemKey: r.key, size: 16 }), r.label, h("span", { className: "font-semibold tabular-nums" }, r.qty))))),
     (maintText || photos.length > 0) && h("button", {
@@ -2559,7 +2620,7 @@ const ApartmentStatusBoard = ({ property, inspection, targets, onOpenRoom }) => 
       h("h3", { className: "text-base font-semibold text-amber-100" }, "תחזוקה"),
       maintText && h("p", { className: "mt-1 text-sm text-ice-50/90 line-clamp-3" }, maintText),
       photos.length > 0 && h("div", { className: "mt-2 flex gap-2" }, photos.slice(0, 4).map((ph, i) =>
-        h("img", { key: i, src: ph.src, alt: ph.note || `תמונת תחזוקה ${i + 1}`, loading: "lazy", className: "w-16 h-16 rounded-xl object-cover border border-white/10" })))));
+        ph.type === "video" ? h("video", { key: i, src: ph.src, preload: "metadata", muted: true, playsInline: true, "aria-label": ph.note || `סרטון תחזוקה ${i + 1}`, className: "w-16 h-16 rounded-xl object-cover border border-white/10 bg-black" }) : h("img", { key: i, src: ph.src, alt: ph.note || `תמונת תחזוקה ${i + 1}`, loading: "lazy", className: "w-16 h-16 rounded-xl object-cover border border-white/10" })))));
 };
 const ApartmentWorkspace = ({ property, inspection, targets, onChange, onOpenRoom }) => {
   const overall = inspectionProgress(inspection);
@@ -2635,12 +2696,13 @@ const VantaHero = () => {
 const aptSummary = (property, inspection, targets) => {
   const cats = Object.keys(CATEGORY_META).map((c) => categoryCounts(inspection, c));
   const sum = cats.reduce((a, c) => ({ ok: a.ok + c.ok, partial: a.partial + c.partial, missing: a.missing + c.missing, pending: a.pending + c.pending, total: a.total + c.total }), { ok: 0, partial: 0, missing: 0, pending: 0, total: 0 });
-  const missingUnits = computePropertyShortages(property, inspection, targets).reduce((a, r) => a + (r.qty || 0), 0);
+  const inspected = sum.total - sum.pending > 0;
+  const missingUnits = inspected ? computePropertyShortages(property, inspection, targets).reduce((a, r) => a + (r.qty || 0), 0) : 0;
   const m = (inspection && inspection.maintenance) || {};
   const maintOpen = ((m.renovations || "").trim() ? 1 : 0) + normalizePhotos(m.photos).length;
   const updated = inspection && (inspection.updatedAt || inspection.completedAt);
-  const days = updated ? Math.floor((Date.now() - updated) / 864e5) : null;
-  return { sum, missingUnits, maintOpen, updated, days, stale: days == null || days > 30, checked: !!updated };
+  const days = updated ? Math.max(0, Math.floor((Date.now() - updated) / 864e5)) : null;
+  return { sum, missingUnits, maintOpen, updated, days, stale: days == null || days > 30, checked: !!updated, inspected };
 };
 const AptCard = ({ property, inspection, targets, onClick, index }) => {
   const h = React.createElement;
@@ -2654,7 +2716,7 @@ const AptCard = ({ property, inspection, targets, onClick, index }) => {
     type: "button", onClick,
     className: `group relative rounded-2xl glass border ${ring} p-3 text-right overflow-hidden flex flex-col gap-2 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300`,
     style: { animationDelay: `${Math.min(index * 30, 600)}ms` },
-    "aria-label": `${property.name}: ${status.t}, ${s.missingUnits ? `חסרות ${s.missingUnits} יחידות` : "אין חסרים"}, ${s.checked ? `נבדקה ב-${fmtDay(s.updated)}` : "לא נבדקה"}`
+    "aria-label": `${property.name}: ${status.t}, ${s.missingUnits ? `חסרות ${s.missingUnits} יחידות` : "אין חסרים"}, ${s.checked ? `נבדקה ב-${fmtDay(s.updated)}` : s.inspected ? "תאריך בדיקה לא ידוע" : "לא נבדקה"}`
   },
     h("div", { className: "flex items-start justify-between gap-2" },
       h("div", { className: "min-w-0" },
@@ -2662,12 +2724,12 @@ const AptCard = ({ property, inspection, targets, onClick, index }) => {
         h("div", { className: "text-[13px] text-ice-50/75 mt-0.5" }, "תפוסה ", property.capacity, property.doubleBeds > 0 ? `, ${property.doubleBeds} זוגיות` : "")),
       property.code && h("span", { className: "shrink-0 rounded-md bg-white/[0.06] border border-white/10 px-1.5 py-0.5 text-[13px] font-mono text-ice-50/90" }, property.code)),
     h("div", { className: "flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]", "aria-hidden": "true" },
-      STATUS_BAR.map((b) => s.sum[b.key] ? h("span", { key: b.key, className: b.cls, style: { width: `${s.sum[b.key] / Math.max(s.sum.total, 1) * 100}%` } }) : null)),
+      s.sum.total ? STATUS_BAR.map((b) => s.sum[b.key] ? h("span", { key: b.key, className: b.cls, style: { width: `${s.sum[b.key] / s.sum.total * 100}%` } }) : null) : h("span", { className: "bg-white/15 w-full" })),
     h("div", { className: "flex flex-wrap items-center gap-1.5 text-[13px]" },
       h("span", { className: `rounded-full border px-2 py-0.5 font-semibold ${status.c}` }, status.t),
       s.missingUnits > 0 && h("span", { className: "rounded-full border border-rose-400/40 bg-rose-400/10 px-2 py-0.5 text-rose-100" }, "חסר ", s.missingUnits),
       s.maintOpen > 0 && h("span", { className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-amber-100" }, "תחזוקה")),
-    h("div", { className: `text-[13px] ${s.stale ? "text-amber-200" : "text-ice-50/70"}` }, s.checked ? `נבדקה ${fmtDay(s.updated)}` : "עוד לא נבדקה"));
+    h("div", { className: `text-[13px] ${s.stale ? "text-amber-200" : "text-ice-50/70"}` }, s.checked ? `נבדקה ${fmtDay(s.updated)}` : s.inspected ? "תאריך בדיקה לא ידוע" : "עוד לא נבדקה"));
 };
 const BuildingHeader = ({ building, count, done, issues, expanded, onToggle }) => {
   const tone = ROOM_ACCENT[building.accent] || ROOM_ACCENT.copper;
