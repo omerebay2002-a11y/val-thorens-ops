@@ -36,9 +36,10 @@
         var bedNew = apt.new && r[0] === "general" && BEDDING[k];
         if (!gap && !bedNew) return;
         var id = r[0] + "~" + k;
-        var base = bedNew ? false : true;
+        // Bedding in a new apartment stays open until marked, or until an inspection after the cutoff reports it ok.
+        var done = bedNew && !gap ? effective(checks[id], 0, inspAt > cutoff && it.status === "ok", cutoff) : effective(checks[id], inspAt, !bedNew, cutoff);
         items.push({ id: id, room: r[1], key: k, label: (DATA.labels[k] || [k])[0], qty: gap ? qtyText(apt, k, it) : "בבדיקה: " + (STATUS_HE[it.status] || it.status),
-          note: it.note || "", bedding: !!bedNew, done: effective(checks[id], inspAt, base, cutoff), check: checks[id] || null });
+          note: it.note || "", bedding: !!bedNew, done: done, check: checks[id] || null });
       });
     });
     if (apt.new) Object.keys(BEDDING).forEach(function (k) {

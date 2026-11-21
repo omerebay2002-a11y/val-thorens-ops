@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
       if (!Array.isArray(data)) throw new Error("shape");
       marks = data
         .filter((m) => m && typeof m.task_id === "string" && ["open", "done", "cant_fix"].includes(m.status))
-        .map((m) => ({ task_id: m.task_id, status: m.status, note: typeof m.note === "string" ? m.note : "", updated_at: m.updated_at || null }));
+        .map((m) => ({ task_id: m.task_id, status: m.status, updated_at: m.updated_at || null })); // notes stay in Frank's keyed interface
       state = "ok";
     } catch (e) {
       state = "unavailable";

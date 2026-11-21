@@ -97,7 +97,7 @@ function frankRow(f) {
   const cls = f.status === "done" ? "done" : f.status === "cant_fix" ? "cant" : "open";
   const ic = cls === "done" ? "✓" : cls === "cant" ? "✗" : "○";
   const st = cls === "done" ? "פרנק תיקן" : cls === "cant" ? "פרנק: לא ניתן לתקן" : "פתוח אצל פרנק";
-  return `<div class="fr ${cls}"><i>${ic}</i><div>${esc(f.label)}<small>${st}${f.at ? " · " + fmt(Date.parse(f.at)) : ""}${f.note ? " · " + esc(f.note) : ""}</small></div></div>`;
+  return `<div class="fr ${cls}"><i>${ic}</i><div>${esc(f.label)}<small>${st}${f.at ? " · " + fmt(Date.parse(f.at)) : ""}</small></div></div>`;
 }
 function card(a) {
   const open = !!S.open[a.apt.id];
@@ -144,11 +144,12 @@ document.addEventListener("click", e => {
   if (d.v) { S.view = d.v; render(); return; }
   if (d.t) { S.open[d.t] = !S.open[d.t]; render(); return; }
   if (d.a && d.i) {
+    if (S.pending[d.a] && d.i in S.pending[d.a]) return; // one write per item at a time
     const a = S.data.apts.find(x => x.apt.id === d.a); const x = [...a.items, ...a.faults].find(y => y.id === d.i);
     const next = !x.done;
     (S.pending[a.apt.id] ||= {})[x.id] = next; applyPending(a); render();
     M.saveCheck(a.apt.id, x.id, next).then(() => { delete S.pending[a.apt.id][x.id]; return load(); })
-      .catch(() => { delete S.pending[a.apt.id][x.id]; x.done = !next; applyPending(a); render(); toast("הסימון לא נשמר. בדקו חיבור ונסו שוב."); });
+      .catch(() => { delete S.pending[a.apt.id][x.id]; toast("הסימון לא נשמר. בדקו חיבור ונסו שוב."); load(); });
   }
 });
 load();
