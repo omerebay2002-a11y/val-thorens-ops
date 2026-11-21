@@ -148,7 +148,7 @@ document.addEventListener("click", e => {
     const a = S.data.apts.find(x => x.apt.id === d.a); const x = [...a.items, ...a.faults].find(y => y.id === d.i);
     const next = !x.done;
     (S.pending[a.apt.id] ||= {})[x.id] = next; applyPending(a); render();
-    M.saveCheck(a.apt.id, x.id, next).then(() => { delete S.pending[a.apt.id][x.id]; return load(); })
+    M.saveCheck(a.apt.id, x.id, next, x.sig).then(() => { delete S.pending[a.apt.id][x.id]; return load(); })
       .catch(() => { delete S.pending[a.apt.id][x.id]; toast("הסימון לא נשמר. בדקו חיבור ונסו שוב."); load(); });
   }
 });
