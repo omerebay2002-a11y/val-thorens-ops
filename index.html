@@ -861,7 +861,7 @@ const uploadMedia = async (file) => {
     try {
       return { src: await cloudinaryUpload(file, "video"), note: "", type: "video" };
     } catch (e) {
-      throw new Error(e && e.status === 400 ? "חשבון המדיה חוסם סרטונים כרגע" : "בעיית רשת, נסו שוב");
+      throw new Error(e && e.status === 400 ? "סרטונים עוד לא נשמרים. מצלמים תמונה במקום" : "בעיית רשת, נסו שוב");
     }
   }
   let blob;
@@ -873,7 +873,7 @@ const uploadMedia = async (file) => {
   try {
     return { src: await cloudinaryUpload(blob, "image"), note: "", type: "image" };
   } catch (e) {
-    if (blob === file) throw e;
+    if (blob === file && file.size > 1.5 * 1024 * 1024) throw new Error("הדפדפן לא קורא את התמונה הזאת. מצלמים אותה בכפתור צלם");
     return { src: await blobToDataUrl(blob), note: "", type: "image" };
   }
 };
@@ -2458,6 +2458,7 @@ const BedroomDiagram = ({ inspection, capacity, doubleBeds, onChange }) => {
 const normalizePhotos = (photos) => (photos || []).map((p) => typeof p === "string" ? { src: p, note: "" } : p && typeof p === "object" ? { src: p.src || "", note: p.note || "", type: p.type === "video" ? "video" : "image" } : null).filter(Boolean);
 const MaintenancePanel = ({ inspection, onChange }) => {
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const latestRef = useRef(inspection);
   latestRef.current = inspection;
   const [uploadState, setUploadState] = useState(null);
@@ -2507,19 +2508,10 @@ const MaintenancePanel = ({ inspection, onChange }) => {
       onChange: handleFiles,
       className: "hidden"
     }
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      onClick: () => {
-        var _a;
-        return (_a = fileInputRef.current) == null ? void 0 : _a.click();
-      },
-      className: "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-rose-400/40 text-rose-200 font-semibold hover:border-rose-400 hover:bg-rose-500/10 transition"
-    },
-    /* @__PURE__ */ React.createElement(IconCamera, { size: 18 }),
-    uploadState && uploadState.busy ? uploadState.text : " הוסף תמונות או סרטונים"
-  ), uploadState && !uploadState.busy && React.createElement("p", { role: "status", className: `mt-2 text-sm ${uploadState.error ? "text-rose-200" : "text-emerald-200"}` }, uploadState.text), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mt-3 stagger" }, photos.map((photo, idx) => /* @__PURE__ */ React.createElement("div", { key: idx, className: "rounded-xl overflow-hidden border border-white/10 bg-night-950/40" }, /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ (photo.type === "video" ? React.createElement("video", { src: photo.src, controls: true, preload: "metadata", playsInline: true, className: "w-full h-32 object-cover bg-black" }) : React.createElement("img", { src: photo.src, alt: photo.note || `תמונת תחזוקה ${idx + 1}`, className: "w-full h-32 object-cover" })), /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("input", { ref: cameraInputRef, type: "file", accept: "image/*", capture: "environment", onChange: handleFiles, className: "hidden" }), React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+    React.createElement("button", { type: "button", disabled: !!(uploadState && uploadState.busy), onClick: () => cameraInputRef.current && cameraInputRef.current.click(), className: "flex items-center justify-center gap-2 min-h-[52px] rounded-xl bg-rose-500 text-white font-bold active:scale-95" }, React.createElement(IconCamera, { size: 18 }), "צלם"),
+    React.createElement("button", { type: "button", disabled: !!(uploadState && uploadState.busy), onClick: () => fileInputRef.current && fileInputRef.current.click(), className: "flex items-center justify-center gap-2 min-h-[52px] rounded-xl border-2 border-dashed border-rose-400/40 text-rose-200 font-semibold" }, "מהגלריה")),
+  uploadState && uploadState.busy && React.createElement("p", { role: "status", className: "mt-2 text-sm text-ice-100/70" }, uploadState.text), uploadState && !uploadState.busy && React.createElement("p", { role: "status", className: `mt-2 text-sm ${uploadState.error ? "text-rose-200" : "text-emerald-200"}` }, uploadState.text), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mt-3 stagger" }, photos.map((photo, idx) => /* @__PURE__ */ React.createElement("div", { key: idx, className: "rounded-xl overflow-hidden border border-white/10 bg-night-950/40" }, /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ (photo.type === "video" ? React.createElement("video", { src: photo.src, controls: true, preload: "metadata", playsInline: true, className: "w-full h-32 object-cover bg-black" }) : React.createElement("img", { src: photo.src, alt: photo.note || `תמונת תחזוקה ${idx + 1}`, className: "w-full h-32 object-cover" })), /* @__PURE__ */ React.createElement(
     "button",
     {
       type: "button",
@@ -2774,48 +2766,30 @@ const aptSummary = (property, inspection, targets) => {
   const days = updated ? Math.max(0, Math.floor((Date.now() - updated) / 864e5)) : null;
   return { sum, missingUnits, maintOpen, updated, days, stale: days == null || days > 30, checked: !!updated, inspected };
 };
-const AptCard = ({ property, inspection, targets, onClick, index }) => {
+const AptCard = ({ property, inspection, targets, onClick }) => {
   const h = React.createElement;
-  const progress = inspectionProgress(inspection);
-  const issues = inspectionHasIssues(inspection);
-  const completed = inspection == null ? void 0 : inspection.completed;
   const s = useMemo(() => aptSummary(property, inspection, targets), [property, inspection, targets]);
-  const ring = completed ? "border-emerald-400/40" : issues ? "border-amber-400/40" : progress > 0 ? "border-sky-400/30" : "border-white/10";
-  const status = completed ? { t: "הושלמה", c: "bg-emerald-500/15 text-emerald-100 border-emerald-400/40" } : issues ? { t: "ליקויים", c: "bg-amber-500/15 text-amber-100 border-amber-400/40" } : progress > 0 ? { t: `בבדיקה ${progress}%`, c: "bg-sky-400/15 text-sky-100 border-sky-400/40" } : { t: "ממתינה", c: "bg-white/[0.06] text-ice-50/85 border-white/15" };
+  const top = useMemo(() => s.inspected ? computePropertyShortages(property, inspection, targets).filter((r) => r.qty > 0).sort((a, b) => b.qty - a.qty) : [], [property, inspection, targets, s.inspected]);
+  const completed = inspection && inspection.completed;
+  const pill = !s.inspected ? { t: "לא נבדקה", c: "bg-white/[0.06] text-ice-50/70" } : s.missingUnits ? { t: `חסר ${s.missingUnits}`, c: "bg-rose-400/15 text-rose-200" } : { t: completed ? "הושלמה" : "הכל תקין", c: "bg-emerald-400/15 text-emerald-200" };
+  const line = !s.inspected ? "עוד לא התחילו בדיקה" : top.length ? top.slice(0, 3).map((r) => `${r.label} ${r.qty}`).join(", ") + (top.length > 3 ? ` ועוד ${top.length - 3}` : "") : s.checked ? `נבדקה ${fmtDay(s.updated)}` : "";
   return h("button", {
     type: "button", onClick,
-    className: `group relative rounded-2xl glass border ${ring} p-3 text-right overflow-hidden flex flex-col gap-2 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300`,
-    style: { animationDelay: `${Math.min(index * 30, 600)}ms` },
-    "aria-label": `${property.name}: ${status.t}, ${s.missingUnits ? `חסרות ${s.missingUnits} יחידות` : "אין חסרים"}, ${s.checked ? `נבדקה ב-${fmtDay(s.updated)}` : s.inspected ? "תאריך בדיקה לא ידוע" : "לא נבדקה"}`
+    className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] min-h-[60px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 active:bg-white/[0.03]",
+    "aria-label": `${property.name}: ${pill.t}${line ? ", " + line : ""}`
   },
-    h("div", { className: "flex items-start justify-between gap-2" },
-      h("div", { className: "min-w-0" },
-        h("div", { className: "text-base font-semibold text-ice-50 truncate leading-tight" }, property.name),
-        h("div", { className: "text-[13px] text-ice-50/75 mt-0.5" }, "תפוסה ", property.capacity, property.doubleBeds > 0 ? `, ${property.doubleBeds} זוגיות` : "")),
-      property.code && h("span", { className: "shrink-0 rounded-md bg-white/[0.06] border border-white/10 px-1.5 py-0.5 text-[13px] font-mono text-ice-50/90" }, property.code)),
-    h("div", { className: "flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]", "aria-hidden": "true" },
-      s.sum.total ? STATUS_BAR.map((b) => s.sum[b.key] ? h("span", { key: b.key, className: b.cls, style: { width: `${s.sum[b.key] / s.sum.total * 100}%` } }) : null) : h("span", { className: "bg-white/15 w-full" })),
-    h("div", { className: "flex flex-wrap items-center gap-1.5 text-[13px]" },
-      h("span", { className: `rounded-full border px-2 py-0.5 font-semibold ${status.c}` }, status.t),
-      s.missingUnits > 0 && h("span", { className: "rounded-full border border-rose-400/40 bg-rose-400/10 px-2 py-0.5 text-rose-100" }, "חסר ", s.missingUnits),
-      s.maintOpen > 0 && h("span", { className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-amber-100" }, "תחזוקה")),
-    h("div", { className: `text-[13px] ${s.stale ? "text-amber-200" : "text-ice-50/70"}` }, s.checked ? `נבדקה ${fmtDay(s.updated)}` : s.inspected ? "תאריך בדיקה לא ידוע" : "עוד לא נבדקה"));
+    h("div", { className: "flex-1 min-w-0" },
+      h("div", { className: "flex items-center gap-2 min-w-0" },
+        h("span", { className: "text-[16.5px] font-bold text-ice-50 truncate" }, property.name),
+        property.code && h("span", { className: "shrink-0 rounded-md bg-white/[0.06] px-1.5 text-[12px] font-mono text-ice-50/70" }, property.code),
+        s.maintOpen > 0 && h("span", { className: "shrink-0 text-[12px] font-semibold text-amber-200" }, "תחזוקה")),
+      h("div", { className: "text-[14px] truncate text-ice-50/65" }, line)),
+    h("span", { className: `shrink-0 min-w-[64px] text-center rounded-lg px-2.5 py-1 text-[13.5px] font-bold tabular-nums ${pill.c}` }, pill.t),
+    h(IconChevron, { size: 18, className: "shrink-0 text-ice-100/35 rotate-90" }));
 };
-const BuildingHeader = ({ building, count, done, issues, expanded, onToggle }) => {
-  const tone = ROOM_ACCENT[building.accent] || ROOM_ACCENT.copper;
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      onClick: onToggle,
-      className: `w-full flex items-center gap-3 p-3 rounded-2xl glass border ${tone.ring} hover:bg-white/[0.04] transition`
-    },
-    /* @__PURE__ */ React.createElement("div", { className: `shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${tone.bg} border ${tone.ring}` }, /* @__PURE__ */ React.createElement("span", null, building.emoji)),
-    /* @__PURE__ */ React.createElement("div", { className: "flex-1 text-right min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "display text-lg text-ice-50 leading-tight truncate" }, building.name), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-ice-100/50 flex items-center gap-2 mt-0.5" }, /* @__PURE__ */ React.createElement("span", null, building.area), /* @__PURE__ */ React.createElement("span", null, "·"), /* @__PURE__ */ React.createElement("span", null, count, " דירות"))),
-    /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 text-[10px] shrink-0" }, done > 0 && /* @__PURE__ */ React.createElement("span", { className: "px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-200 border border-emerald-400/30 font-bold" }, "✓ ", done), issues > 0 && /* @__PURE__ */ React.createElement("span", { className: "px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-400/30 font-bold" }, "⚠ ", issues)),
-    /* @__PURE__ */ React.createElement(IconChevron, { size: 18, className: `text-ice-100/40 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}` })
-  );
-};
+const BuildingHeader = ({ building, count, expanded, onToggle }) => React.createElement("button", { type: "button", onClick: onToggle, "aria-expanded": expanded, className: "w-full flex items-center justify-between pt-5 pb-1 text-[13px] font-bold text-ice-100/55" },
+  React.createElement("span", null, building.name),
+  React.createElement("span", { className: "flex items-center gap-2 tabular-nums" }, count, " דירות", React.createElement(IconChevron, { size: 14, className: `transition-transform ${expanded ? "rotate-180" : ""}` })));
 const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) => {
   const [collapsed, setCollapsed] = useState({});
   const isSearching = !!search.trim();
@@ -2835,7 +2809,7 @@ const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) 
     }
     return orderedBuildings;
   }, [properties]);
-  return /* @__PURE__ */ React.createElement("div", { className: "space-y-3 pb-6 stagger" }, groups.map(({ building, items }, gi) => {
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, groups.map(({ building, items }, gi) => {
     const open = isSearching ? true : !collapsed[building.id];
     let done = 0, issues = 0;
     items.forEach((p) => {
@@ -2843,7 +2817,7 @@ const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) 
       if (ins == null ? void 0 : ins.completed) done += 1;
       else if (inspectionHasIssues(ins)) issues += 1;
     });
-    return /* @__PURE__ */ React.createElement("div", { key: building.id, className: "space-y-2" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { key: building.id }, /* @__PURE__ */ React.createElement(
       BuildingHeader,
       {
         building,
@@ -2853,7 +2827,7 @@ const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) 
         expanded: open,
         onToggle: () => setCollapsed((c) => ({ ...c, [building.id]: !c[building.id] }))
       }
-    ), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-2 px-1 pb-1 anim-fade-in" }, items.map((p, i) => /* @__PURE__ */ React.createElement(
+    ), open && /* @__PURE__ */ React.createElement("div", { className: "anim-fade-in" }, items.map((p, i) => /* @__PURE__ */ React.createElement(
       AptCard,
       {
         key: p.id,
@@ -2866,7 +2840,7 @@ const BuildingGroups = ({ properties, inspections, targets, onSelect, search }) 
     ))));
   }));
 };
-const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSelect }) => {
+const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSelect, onShop }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const filtered = useMemo(() => {
@@ -2907,12 +2881,11 @@ const ApartmentGrid = ({ properties, inspections, targets, setInspection, onSele
     if (!inspections[id]) setInspection(id, createBlankInspection());
     onSelect(id);
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "relative anim-fade-in" }, /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-5 relative" }, React.createElement("div", { className: "mb-4" }, React.createElement("h1", { className: "text-2xl font-semibold text-ice-50" }, "דירות ואל טורנס"), React.createElement("p", { className: "text-sm text-ice-50/75 mt-0.5" }, stats.total, " דירות, ", stats.done, " הושלמו")), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4" }, [
-    { key: "buy", value: stats.buyApts, label: "צריכות קניות", sub: `${stats.buyUnits} יחידות חסרות`, tone: "border-rose-400/40 bg-rose-400/10 text-rose-100" },
-    { key: "maint", value: stats.maint, label: "תחזוקה פתוחה", sub: "הערות ותמונות", tone: "border-amber-300/40 bg-amber-400/10 text-amber-100" },
-    { key: "stale", value: stats.stale, label: "בדיקה ישנה", sub: "מעל 30 יום או לא נבדקה", tone: "border-sky-400/40 bg-sky-400/10 text-sky-100" },
-    { key: "done", value: stats.done, label: "הושלמו", sub: `מתוך ${stats.total}`, tone: "border-emerald-400/40 bg-emerald-400/10 text-emerald-100" }
-  ].map((t) => React.createElement("button", { key: t.key, type: "button", onClick: () => setFilter(filter === t.key ? "all" : t.key), "aria-pressed": filter === t.key, className: `rounded-2xl border p-3 text-right min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-copper-300 ${t.tone} ${filter === t.key ? "ring-2 ring-copper-300" : ""}` }, React.createElement("div", { className: "text-3xl font-semibold leading-none tabular-nums" }, t.value), React.createElement("div", { className: "mt-1.5 text-sm font-semibold" }, t.label), React.createElement("div", { className: "text-[13px] text-ice-50/75" }, t.sub)))), /* @__PURE__ */ React.createElement("div", { className: "relative mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "absolute right-3 top-1/2 -translate-y-1/2 text-ice-100/40" }, /* @__PURE__ */ React.createElement(IconSearch, { size: 18 })), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "relative anim-fade-in" }, /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-5 relative" }, React.createElement("div", { className: "mb-4" }, React.createElement("h1", { className: "text-2xl font-semibold text-ice-50" }, "דירות ואל טורנס")), React.createElement("div", { className: "flex items-center gap-3 mb-3" },
+    React.createElement("div", { className: "flex-1 min-w-0" },
+      React.createElement("div", { className: "text-xl font-extrabold text-ice-50 tabular-nums" }, stats.buyUnits.toLocaleString("he-IL"), " יחידות חסרות"),
+      React.createElement("div", { className: "text-sm text-ice-50/70 tabular-nums" }, "ב-", stats.buyApts, " דירות. ", stats.done, " מתוך ", stats.total, " הושלמו")),
+    onShop && React.createElement("button", { type: "button", onClick: onShop, className: "shrink-0 h-11 px-4 rounded-xl bg-copper-500 text-white font-bold text-[15px] flex items-center gap-1.5 active:scale-95" }, React.createElement(IconCart, { size: 16 }), "לקניות")), /* @__PURE__ */ React.createElement("div", { className: "sticky z-20 -mx-4 px-4 py-2 mb-1 bg-night-950/95 backdrop-blur-xl", style: { top: "var(--hdr, 0px)" } }, /* @__PURE__ */ React.createElement("span", { className: "absolute right-7 top-1/2 -translate-y-1/2 text-ice-100/40 z-10" }, /* @__PURE__ */ React.createElement(IconSearch, { size: 18 })), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",
@@ -3485,6 +3458,15 @@ const App = () => {
   const [targets, setTargets] = useState(() => safeLoad(STORAGE_KEYS.targets, {}));
   const [showConnect, setShowConnect] = useState(false);
   const [syncStatus, setSyncStatus] = useState("syncing");
+  const [showMenu, setShowMenu] = useState(false);
+  const hdrRef = useRef(null);
+  useEffect(() => {
+    const el = hdrRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--hdr", el.offsetHeight + "px"));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const fromRemote = useRef(false);
   const hasLoadedOnce = useRef(false);
   const inspectionsRef = useRef({});
@@ -3655,7 +3637,7 @@ const App = () => {
     if (selectedRoom) setSelectedRoom(null);
     else if (selectedAptId) setSelectedAptId(null);
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex flex-col relative" }, /* @__PURE__ */ React.createElement("header", { className: "bg-night-950/80 backdrop-blur-xl text-ice-50 pt-safe sticky top-0 z-30 border-b border-white/5 no-print" }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 min-w-0 flex-1" }, (selectedAptId || selectedRoom) && mode === "inspect" ? /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex flex-col relative" }, /* @__PURE__ */ React.createElement("header", { ref: hdrRef, className: "bg-night-950/80 backdrop-blur-xl text-ice-50 pt-safe sticky top-0 z-30 border-b border-white/5 no-print" }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 min-w-0 flex-1" }, (selectedAptId || selectedRoom) && mode === "inspect" ? /* @__PURE__ */ React.createElement(
     "button",
     {
       type: "button",
@@ -3664,20 +3646,9 @@ const App = () => {
       "aria-label": "חזרה"
     },
     /* @__PURE__ */ React.createElement(IconArrowLeft, { size: 20 })
-  ) : /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-gradient-to-br from-copper-500 to-copper-600 flex items-center justify-center shadow-[0_4px_20px_-6px_rgba(200,127,62,0.7)] shrink-0" }, /* @__PURE__ */ React.createElement(IconMountain, { size: 18, className: "text-white" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, selectedAptId && property ? /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-[10px] text-copper-300/70 uppercase tracking-[0.18em] display leading-none" }, currentRoom ? property.name : "Workspace"), /* @__PURE__ */ React.createElement("h1", { className: "display text-base text-ice-50 leading-tight truncate" }, currentRoom ? currentRoom.label : property.name)) : /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "display text-base leading-tight" }, "בדיקת דירות"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-ice-100/80 leading-tight" }, "Val Thorens · ", visibleProperties.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 shrink-0" }, syncStatus !== "off" && /* @__PURE__ */ React.createElement("span", { className: `w-2 h-2 rounded-full ${syncStatus === "ok" ? "bg-emerald-400" : syncStatus === "syncing" ? "bg-amber-400 animate-pulse" : "bg-rose-400"}`, title: syncStatus === "ok" ? "מסונכרן" : syncStatus === "syncing" ? "מסנכרן…" : "שגיאת חיבור" }), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      onClick: forceRefresh,
-      disabled: isRefreshing,
-      className: `p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05] transition-transform ${isRefreshing ? "animate-spin opacity-50" : ""}`,
-      title: "רענן מהענן"
-    },
-    /* @__PURE__ */ React.createElement(IconRefresh, { size: 18 })
-  ), /* @__PURE__ */ React.createElement("input", { ref: importInputRef, type: "file", accept: "application/json", onChange: importJSON, className: "hidden" }), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => setShowConnect(true), className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "התחבר לטלפון" }, /* @__PURE__ */ React.createElement(IconPhone, { size: 18 })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => {
-    var _a;
-    return (_a = importInputRef.current) == null ? void 0 : _a.click();
-  }, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייבוא JSON" }, /* @__PURE__ */ React.createElement(IconUpload, { size: 18 })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: exportJSON, className: "p-2 rounded-lg text-ice-100/70 hover:bg-white/[0.05]", title: "ייצוא JSON" }, /* @__PURE__ */ React.createElement(IconDownload, { size: 18 })))), !selectedAptId && /* @__PURE__ */ React.createElement("div", { className: "mt-3 grid grid-cols-3 gap-1 p-1 bg-white/[0.04] border border-white/5 rounded-xl" }, [
+  ) : /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl bg-gradient-to-br from-copper-500 to-copper-600 flex items-center justify-center shadow-[0_4px_20px_-6px_rgba(200,127,62,0.7)] shrink-0" }, /* @__PURE__ */ React.createElement(IconMountain, { size: 18, className: "text-white" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, selectedAptId && property ? /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-[10px] text-copper-300/70 uppercase tracking-[0.18em] display leading-none" }, currentRoom ? property.name : "Workspace"), /* @__PURE__ */ React.createElement("h1", { className: "display text-base text-ice-50 leading-tight truncate" }, currentRoom ? currentRoom.label : property.name)) : /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "display text-base leading-tight" }, "בדיקת דירות"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-ice-100/80 leading-tight" }, "Val Thorens · ", visibleProperties.length, " דירות")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 shrink-0" }, React.createElement("span", { role: "status", className: `shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] font-bold ${syncStatus === "ok" ? "bg-emerald-500/15 text-emerald-200" : syncStatus === "syncing" || syncStatus === "off" ? "bg-white/[0.06] text-ice-100/70" : "bg-rose-500/15 text-rose-200"}` }, syncStatus === "ok" ? "נשמר ✓" : syncStatus === "syncing" ? "שומר…" : syncStatus === "off" ? "נשמר במכשיר" : "אין חיבור"),
+  React.createElement("input", { ref: importInputRef, type: "file", accept: "application/json", onChange: importJSON, className: "hidden" }),
+  React.createElement("button", { type: "button", onClick: () => setShowMenu(true), className: "shrink-0 h-10 px-3 rounded-xl border border-white/15 text-ice-50 text-sm font-semibold flex items-center gap-1.5 hover:bg-white/[0.05]" }, React.createElement(IconSettings, { size: 16 }), "תפריט"))), !selectedAptId && /* @__PURE__ */ React.createElement("div", { className: "mt-3 grid grid-cols-3 gap-1 p-1 bg-white/[0.04] border border-white/5 rounded-xl" }, [
     { key: "inspect", label: "בדיקה", icon: /* @__PURE__ */ React.createElement(IconClipboard, { size: 14 }) },
     { key: "shopping", label: "קניות", icon: /* @__PURE__ */ React.createElement(IconCart, { size: 14 }) },
     { key: "setup", label: "הגדרות", icon: /* @__PURE__ */ React.createElement(IconSettings, { size: 14 }) }
@@ -3714,6 +3685,7 @@ const App = () => {
   ), /* @__PURE__ */ React.createElement(IconChevRight, { size: 10 }), /* @__PURE__ */ React.createElement("span", { className: ROOM_ACCENT[currentRoom.accent].text }, currentRoom.label)) : /* @__PURE__ */ React.createElement("span", { className: "text-ice-50/80" }, property.name)))), /* @__PURE__ */ React.createElement("main", { className: "flex-1 max-w-2xl mx-auto w-full pb-safe relative z-10" }, mode === "inspect" && !selectedAptId && /* @__PURE__ */ React.createElement(
     ApartmentGrid,
     {
+      onShop: () => switchMode("shopping"),
       properties: visibleProperties,
       inspections,
       targets,
@@ -3737,7 +3709,17 @@ const App = () => {
       roomKey: selectedRoom,
       onChange: handleInspectionChange
     }
-  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties: visibleProperties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties: visibleProperties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
+  )), mode === "shopping" && /* @__PURE__ */ React.createElement(ShoppingView, { properties: visibleProperties, inspections, setInspections, targets, setTargets }), mode === "setup" && /* @__PURE__ */ React.createElement(SetupView, { properties: visibleProperties, setProperties, inspections, setInspections, syncStatus })), /* @__PURE__ */ React.createElement("footer", { className: "text-center text-[10px] text-ice-100/30 py-3 no-print" }, "כל הנתונים נשמרים מקומית במכשיר · גרסה 2.0"), showMenu && React.createElement("div", { className: "fixed inset-0 z-50 no-print" },
+    React.createElement("div", { className: "absolute inset-0 bg-black/60", onClick: () => setShowMenu(false) }),
+    React.createElement("div", { role: "dialog", "aria-label": "תפריט", className: "absolute inset-x-0 bottom-0 mx-auto max-w-lg rounded-t-3xl bg-night-800 border-t border-white/15 px-4 pt-3 pb-safe" },
+      React.createElement("div", { className: "mx-auto mb-2 h-1.5 w-10 rounded-full bg-white/20" }),
+      React.createElement("h2", { className: "text-lg font-extrabold text-ice-50" }, "תפריט"),
+      React.createElement("p", { className: "text-[13px] text-emerald-200 mb-1" }, "כל שינוי נשמר מיד, וכולם רואים אותו."),
+      React.createElement("button", { type: "button", onClick: () => { setShowMenu(false); forceRefresh(); }, className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] last:border-0" }, React.createElement("span", { className: "w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-copper-300 shrink-0" }, React.createElement(IconRefresh, { size: 18 })), React.createElement("span", { className: "min-w-0" }, React.createElement("span", { className: "block font-bold text-ice-50" }, "רענון"), React.createElement("span", { className: "block text-[13px] text-ice-50/65" }, "טוען שוב את מה ששאר הצוות סימן"))),
+      React.createElement("button", { type: "button", onClick: () => { setShowMenu(false); setShowConnect(true); }, className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] last:border-0" }, React.createElement("span", { className: "w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-copper-300 shrink-0" }, React.createElement(IconPhone, { size: 18 })), React.createElement("span", { className: "min-w-0" }, React.createElement("span", { className: "block font-bold text-ice-50" }, "פתיחה בטלפון"), React.createElement("span", { className: "block text-[13px] text-ice-50/65" }, "קוד לסריקה, והאפליקציה נפתחת בטלפון"))),
+      React.createElement("button", { type: "button", onClick: () => { setShowMenu(false); switchMode("setup"); }, className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] last:border-0" }, React.createElement("span", { className: "w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-copper-300 shrink-0" }, React.createElement(IconSettings, { size: 18 })), React.createElement("span", { className: "min-w-0" }, React.createElement("span", { className: "block font-bold text-ice-50" }, "הגדרות דירות"), React.createElement("span", { className: "block text-[13px] text-ice-50/65" }, "הוספה ועריכה של דירות"))),
+      React.createElement("button", { type: "button", onClick: () => { setShowMenu(false); exportJSON(); }, className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] last:border-0" }, React.createElement("span", { className: "w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-copper-300 shrink-0" }, React.createElement(IconDownload, { size: 18 })), React.createElement("span", { className: "min-w-0" }, React.createElement("span", { className: "block font-bold text-ice-50" }, "שמירת גיבוי"), React.createElement("span", { className: "block text-[13px] text-ice-50/65" }, "מוריד קובץ עם כל הבדיקות"))),
+      React.createElement("button", { type: "button", onClick: () => { setShowMenu(false); importInputRef.current && importInputRef.current.click(); }, className: "w-full flex items-center gap-3 py-3 text-right border-b border-white/[0.07] last:border-0" }, React.createElement("span", { className: "w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-copper-300 shrink-0" }, React.createElement(IconUpload, { size: 18 })), React.createElement("span", { className: "min-w-0" }, React.createElement("span", { className: "block font-bold text-ice-50" }, "טעינת גיבוי"), React.createElement("span", { className: "block text-[13px] text-ice-50/65" }, "מחזיר בדיקות מקובץ גיבוי"))))), showConnect && /* @__PURE__ */ React.createElement(ConnectModal, { onClose: () => setShowConnect(false) }));
 };
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(/* @__PURE__ */ React.createElement(App, null));
