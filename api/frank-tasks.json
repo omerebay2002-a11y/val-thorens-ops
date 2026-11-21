@@ -1,0 +1,359 @@
+{
+"source": "https://vt-repairs.vercel.app/ (task list read 20.11.2026, identical to 9.11 list: 59 tasks)",
+"tasks": [
+{
+"id": "cime-de-caron-1304-1",
+"apt": "cime-de-caron-1304",
+"he": "צביעה מחדש של הדירה",
+"en": "Repaint the apartment"
+},
+{
+"id": "cuzco-e18-1",
+"apt": "cusco-e18",
+"he": "תיקון האוורור בחדר הרחצה וטיפול בעובש",
+"en": "Fix the bathroom ventilation and treat the mold"
+},
+{
+"id": "cuzco-h26-1",
+"apt": "cusco-h26",
+"he": "נורה שרופה",
+"en": "Burned-out bulb"
+},
+{
+"id": "cuzco-h26-2",
+"apt": "cusco-h26",
+"he": "מושב אסלה רופף",
+"en": "Loose toilet seat"
+},
+{
+"id": "cuzco-h26-3",
+"apt": "cusco-h26",
+"he": "קרעים בספה",
+"en": "Tears in the sofa"
+},
+{
+"id": "cuzco-h26-4",
+"apt": "cusco-h26",
+"he": "דלת המרפסת פגומה",
+"en": "Balcony door is damaged"
+},
+{
+"id": "cuzco-h26-5",
+"apt": "cusco-h26",
+"he": "החזרת דלת ההפרדה למקומה",
+"en": "Put the partition door back"
+},
+{
+"id": "cuzco-h26-6",
+"apt": "cusco-h26",
+"he": "חיזוק המדף",
+"en": "Strengthen the shelf"
+},
+{
+"id": "cuzco-k4-1",
+"apt": "cusco-k4",
+"he": "סידור הארון בכניסה",
+"en": "Tidy the entrance closet"
+},
+{
+"id": "dôme-315-1",
+"apt": "dome-de-polset-315",
+"he": "עובש ברובה במקלחת",
+"en": "Mold in the shower grout"
+},
+{
+"id": "dôme-315-2",
+"apt": "dome-de-polset-315",
+"he": "חסרה תאורת תקרה במקלחת",
+"en": "Shower ceiling light is missing"
+},
+{
+"id": "dôme-315-3",
+"apt": "dome-de-polset-315",
+"he": "שיפור המדפים בכניסה",
+"en": "Improve the entrance shelves"
+},
+{
+"id": "dôme-315-4",
+"apt": "dome-de-polset-315",
+"he": "הוספת כיסאות למרפסת",
+"en": "Add balcony chairs"
+},
+{
+"id": "joker-16-1",
+"apt": "joker-16",
+"he": "מעט עובש",
+"en": "Some mold"
+},
+{
+"id": "joker-c3-1",
+"apt": "joker-c3",
+"he": "עובש במקלחת",
+"en": "Mold in the shower"
+},
+{
+"id": "joker-c3-2",
+"apt": "joker-c3",
+"he": "ריפוד מחדש של הספה",
+"en": "Reupholster the sofa"
+},
+{
+"id": "joker-c3-3",
+"apt": "joker-c3",
+"he": "החלפת השולחן במרפסת",
+"en": "Replace the balcony table"
+},
+{
+"id": "joker-c3-4",
+"apt": "joker-c3",
+"he": "קיבוע התנור בסלון",
+"en": "Fasten the living room heater"
+},
+{
+"id": "joker-c3-5",
+"apt": "joker-c3",
+"he": "סבונייה רופפת במקלחת",
+"en": "Loose shower soap dish"
+},
+{
+"id": "joker-c3-6",
+"apt": "joker-c3",
+"he": "מחזיק נייר טואלט שבור",
+"en": "Broken toilet paper holder"
+},
+{
+"id": "joker-c3-7",
+"apt": "joker-c3",
+"he": "בכיור: מאחד הברזים לא יוצאים מים",
+"en": "Sink: one tap gives no water"
+},
+{
+"id": "joker-c3-8",
+"apt": "joker-c3",
+"he": "כיסאות למרפסת",
+"en": "Balcony chairs"
+},
+{
+"id": "joker-c8-1",
+"apt": "joker-c8",
+"he": "החלפת מחזיק ראש המקלחת",
+"en": "Replace the shower head holder"
+},
+{
+"id": "joker-c8-2",
+"apt": "joker-c8",
+"he": "סבונייה רופפת",
+"en": "Loose soap dish"
+},
+{
+"id": "joker-c8-3",
+"apt": "joker-c8",
+"he": "הוספת מדפים ומקומות אחסון",
+"en": "Add shelves and storage"
+},
+{
+"id": "joker-c8-4",
+"apt": "joker-c8",
+"he": "כתמים על כיסוי המזרן",
+"en": "Stained mattress cover"
+},
+{
+"id": "joker-c8-5",
+"apt": "joker-c8",
+"he": "כיסא העץ אינו מתאים לשימוש בתוך הדירה",
+"en": "Wooden chair not suitable inside"
+},
+{
+"id": "la-vanoise-473-1",
+"apt": "la-vanoise-473",
+"he": "עובש ברובה במקלחת",
+"en": "Mold in the shower grout"
+},
+{
+"id": "la-vanoise-473-2",
+"apt": "la-vanoise-473",
+"he": "מושב אסלה סדוק",
+"en": "Cracked toilet seat"
+},
+{
+"id": "la-vanoise-473-3",
+"apt": "la-vanoise-473",
+"he": "הוצאת המנורה העומדת",
+"en": "Remove the floor lamp"
+},
+{
+"id": "lauzières-612-1",
+"apt": "lauzieres-612",
+"he": "תיקון דלת ההזזה",
+"en": "Repair the sliding door"
+},
+{
+"id": "machu-603-1",
+"apt": "machu-603",
+"he": "מחזיק נייר טואלט רופף",
+"en": "Loose toilet paper holder"
+},
+{
+"id": "machu-603-2",
+"apt": "machu-603",
+"he": "לוח עץ רופף מעל הדלת",
+"en": "Loose wooden panel above the door"
+},
+{
+"id": "machu-603-3",
+"apt": "machu-603",
+"he": "שרפרף עץ פגום",
+"en": "Damaged wooden stool"
+},
+{
+"id": "machu-603-4",
+"apt": "machu-603",
+"he": "החלפת הצלחות בסט אחיד",
+"en": "Replace the plates with a matching set"
+},
+{
+"id": "machu-801-1",
+"apt": "machu-801",
+"he": "נורה שרופה בסלון",
+"en": "Living room light burned out"
+},
+{
+"id": "machu-801-2",
+"apt": "machu-801",
+"he": "רווחים ברצפת הכניסה",
+"en": "Gaps in the entrance floor"
+},
+{
+"id": "machu-801-3",
+"apt": "machu-801",
+"he": "עובש במקלחת",
+"en": "Mold in the shower"
+},
+{
+"id": "machu-801-4",
+"apt": "machu-801",
+"he": "חסר חוט משיכה במנורת חדר השינה",
+"en": "Bedroom lamp has no pull cord"
+},
+{
+"id": "machu-801-5",
+"apt": "machu-801",
+"he": "חסרה מגירת האחסון מתחת לספה",
+"en": "Storage drawer under the sofa missing"
+},
+{
+"id": "machu-801-6",
+"apt": "machu-801",
+"he": "תקלה בחשמל בכניסה",
+"en": "Electrical issue at the entrance"
+},
+{
+"id": "machu-801-7",
+"apt": "machu-801",
+"he": "מושב אסלה רופף",
+"en": "Loose toilet seat"
+},
+{
+"id": "machu-801-8",
+"apt": "machu-801",
+"he": "חסר מחזיק לראש המקלחת",
+"en": "Shower head holder missing"
+},
+{
+"id": "neves-194-1",
+"apt": "neves-194",
+"he": "תיקון מכונת הכביסה",
+"en": "Repair the washing machine"
+},
+{
+"id": "neves-194-2",
+"apt": "neves-194",
+"he": "דליפה קטנה במקלחת",
+"en": "Small leak in the shower"
+},
+{
+"id": "neves-194-3",
+"apt": "neves-194",
+"he": "קניית סכין מטבח טובה",
+"en": "Buy a good kitchen knife"
+},
+{
+"id": "olympiades-112-1",
+"apt": "olympiades-112",
+"he": "ידית דלת המרפסת רופפת",
+"en": "Loose balcony door handle"
+},
+{
+"id": "olympiades-112-2",
+"apt": "olympiades-112",
+"he": "כתמים על המזרן",
+"en": "Stained mattress"
+},
+{
+"id": "olympiades-112-3",
+"apt": "olympiades-112",
+"he": "נורה שרופה בחדר הרחצה",
+"en": "Bathroom light burned out"
+},
+{
+"id": "olympiades-112-4",
+"apt": "olympiades-112",
+"he": "התקנת מאוורר לחדר הרחצה כמו זה בכל דירה",
+"en": "Install a bathroom fan like this one in every apartment"
+},
+{
+"id": "pichu-408-1",
+"apt": "pichu-408",
+"he": "חסר חלק בשתי הספות",
+"en": "A part is missing on both sofas"
+},
+{
+"id": "sérac-j10-1",
+"apt": "le-serac-j10",
+"he": "חסר מחזיק לראש המקלחת",
+"en": "Shower head holder missing"
+},
+{
+"id": "sérac-j10-2",
+"apt": "le-serac-j10",
+"he": "עובש בחיבורים של האמבטיה",
+"en": "Mold in the bathtub seams"
+},
+{
+"id": "sérac-j10-3",
+"apt": "le-serac-j10",
+"he": "ניקוי מדף הזכוכית מעל הכיור",
+"en": "Clean the glass shelf above the sink"
+},
+{
+"id": "sérac-j10-4",
+"apt": "le-serac-j10",
+"he": "חסר וילון לחלון",
+"en": "Window curtain missing"
+},
+{
+"id": "sérac-j10-5",
+"apt": "le-serac-j10",
+"he": "סבונייה רופפת מעל הכיור",
+"en": "Loose soap dish above the sink"
+},
+{
+"id": "sérac-k10-1",
+"apt": "le-serac-k10",
+"he": "דלת מקלחת שבורה",
+"en": "Broken shower door"
+},
+{
+"id": "sérac-k10-2",
+"apt": "le-serac-k10",
+"he": "לוח שאינו מתרומם",
+"en": "A board does not lift up"
+},
+{
+"id": "sérac-k10-3",
+"apt": "le-serac-k10",
+"he": "החלפת המראה במקלחת",
+"en": "Replace the shower mirror"
+}
+]
+}

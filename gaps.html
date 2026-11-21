@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>פערים בדירות · ואל טורנס</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+<style>
+/* One phone column: sticky summary + filter, one card per apartment, big tick rows. Marks are saved in the shared Ops database. */
+:root{--bg:#0a1220;--surface:#111b2c;--surface-2:#172338;--line:rgba(205,222,245,.10);--line-2:rgba(205,222,245,.2);
+--fg:#e8eef6;--muted:#9aabc2;--faint:#6f819b;--accent:#d98959;--ok:#41c592;--ok-soft:rgba(65,197,146,.14);--miss:#f27d7f;--miss-soft:rgba(242,125,127,.13);--warn:#f0b94a;--new:#7cb4ff;--new-soft:rgba(124,180,255,.14)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:"Heebo",system-ui,sans-serif;font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.app{max-width:560px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) calc(48px + env(safe-area-inset-bottom))}
+.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0 -16px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:22px;font-weight:800}
+.sum{font-size:14px;color:var(--muted);margin:2px 0 10px}
+.sum b{color:var(--fg)}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.apt{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.apt.clear{background:transparent;border-style:dashed}
+.head{display:flex;align-items:center;gap:10px;width:100%;text-align:right;padding:14px}
+.head .m{flex:1;min-width:0}
+.name{font-weight:800;font-size:18px}
+.sub{font-size:13.5px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:7px;background:var(--new-soft);color:var(--new);margin-inline-start:6px;vertical-align:2px}
+.pill{flex:none;font-size:14px;font-weight:700;padding:5px 10px;border-radius:9px;white-space:nowrap}
+.pill.open{background:var(--miss-soft);color:var(--miss)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.chev{flex:none;color:var(--faint);transition:transform .2s}
+.apt[data-open="1"] .chev{transform:rotate(180deg)}
+.body{padding:0 14px 14px}
+.sec{font-size:13px;font-weight:700;color:var(--faint);padding:12px 0 2px}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:right;min-height:52px;padding:8px 0;border-top:1px solid var(--line)}
+.box{flex:none;width:30px;height:30px;border-radius:9px;border:2px solid var(--line-2);display:grid;place-items:center;color:transparent}
+.row[aria-pressed="true"] .box{background:var(--ok);border-color:var(--ok);color:#06231a}
+.row .t{flex:1;min-width:0;font-weight:600}
+.row .t small{display:block;font-weight:500;font-size:13.5px;color:var(--muted)}
+.row .t small.w{color:var(--warn)}
+.row[aria-pressed="true"] .t{color:var(--faint);text-decoration:line-through;text-decoration-thickness:1px}
+.row[aria-pressed="true"] .t small{color:var(--faint)}
+.row.busy{opacity:.55}
+.fr{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
+.fr i{flex:none;font-style:normal;font-weight:800;width:22px;text-align:center}
+.fr.done i{color:var(--ok)}.fr.cant i{color:var(--miss)}.fr.open i{color:var(--warn)}
+.fr small{display:block;color:var(--muted);font-size:13px}
+details{margin-top:10px}
+summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600;padding:8px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+.meta{margin-top:12px;font-size:13px;color:var(--faint);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.meta a{color:var(--muted)}
+.empty{padding:32px 0;text-align:center;color:var(--muted)}
+.foot{margin-top:20px;font-size:13px;color:var(--faint)}
+.foot.err{color:var(--miss)}
+.toast{position:fixed;inset-inline:16px;bottom:calc(16px + env(safe-area-inset-bottom));max-width:528px;margin:0 auto;background:var(--miss);color:#2a0607;font-weight:700;padding:12px 14px;border-radius:12px;display:none}
+.toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="empty">טוען…</div></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="gaps-model.js"></script>
+<script>
+const M = window.GapsModel;
+const FRANK_URL = "/api/frank";
+const S = { view: "open", open: {}, data: null, err: null, pending: {} };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+const CHEV = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+const fmt = ms => ms ? new Date(ms).toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit" }) : "";
+
+function applyPending(a) {
+  const p = S.pending[a.apt.id]; if (!p) return a;
+  [...a.items, ...a.faults].forEach(x => { if (x.id in p) x.done = p[x.id]; });
+  a.open = a.items.filter(x => !x.done).length;
+  a.openFaults = a.faults.filter(x => !x.done).length;
+  return a;
+}
+function load() {
+  return M.loadAll(FRANK_URL).then(d => { d.apts.forEach(applyPending); S.data = d; S.err = null; render(); })
+    .catch(e => { S.err = "אין חיבור למסד. הסימונים לא נשמרים כרגע."; render(); });
+}
+function row(a, x, kind) {
+  const busy = S.pending[a.apt.id] && x.id in S.pending[a.apt.id];
+  const sub = kind === "item" ? `<small class="${x.bedding ? "w" : ""}">${esc(x.room)} · ${esc(x.qty)}${x.note ? " · " + esc(x.note) : ""}</small>` : "";
+  return `<button class="row${busy ? " busy" : ""}" data-a="${a.apt.id}" data-i="${esc(x.id)}" aria-pressed="${x.done}"><span class="box">${CHECK}</span><span class="t">${esc(x.label)}${sub}</span></button>`;
+}
+function frankRow(f) {
+  const cls = f.status === "done" ? "done" : f.status === "cant_fix" ? "cant" : "open";
+  const ic = cls === "done" ? "✓" : cls === "cant" ? "✗" : "○";
+  const st = cls === "done" ? "פרנק תיקן" : cls === "cant" ? "פרנק: לא ניתן לתקן" : "פתוח אצל פרנק";
+  return `<div class="fr ${cls}"><i>${ic}</i><div>${esc(f.label)}<small>${st}${f.at ? " · " + fmt(Date.parse(f.at)) : ""}</small></div></div>`;
+}
+function card(a) {
+  const open = !!S.open[a.apt.id];
+  const pill = a.open ? `<span class="pill open num">חסרים ${a.open}</span>` : `<span class="pill ok">אין חוסרים</span>`;
+  const subBits = [M.buildingName(a.apt.b)];
+  if (a.openFaults) subBits.push("תקלות: " + a.openFaults);
+  if (a.frankOpen) subBits.push("פרנק: " + a.frankOpen + " פתוחים");
+  let body = "";
+  if (open) {
+    const oi = a.items.filter(x => !x.done), of = a.faults.filter(x => !x.done);
+    const done = [...a.items.filter(x => x.done).map(x => [x, "item"]), ...a.faults.filter(x => x.done).map(x => [x, "fault"])];
+    const fOpen = a.frank.filter(f => f.status !== "done"), fDone = a.frank.filter(f => f.status === "done");
+    body = `<div class="body">
+      ${oi.length ? `<div class="sec">חסר בדירה · לחיצה = הושלם</div>${oi.map(x => row(a, x, "item")).join("")}` : ""}
+      ${of.length ? `<div class="sec">תקלות מהבדיקה</div>${of.map(x => row(a, x, "fault")).join("")}` : ""}
+      ${!oi.length && !of.length ? `<div class="sec">אין פערים פתוחים בדירה הזאת</div>` : ""}
+      ${a.frank.length ? `<div class="sec">תיקונים אצל פרנק · ${fDone.length} מתוך ${a.frank.length} תוקנו</div>${fOpen.map(frankRow).join("")}${fDone.length ? `<details><summary>מה פרנק כבר תיקן (${fDone.length})</summary>${fDone.map(frankRow).join("")}</details>` : ""}` : ""}
+      ${done.length ? `<details><summary>הושלם (${done.length}) · לחיצה מחזירה לרשימה</summary>${done.map(([x, k]) => row(a, x, k)).join("")}</details>` : ""}
+      <div class="meta"><span>${a.inspectedAt ? "בדיקה אחרונה " + fmt(a.inspectedAt) : "אין בדיקה באפליקציה"}</span><a href="/" target="_blank" rel="noopener">לאפליקציית הבדיקות</a></div>
+    </div>`;
+  }
+  return `<section class="apt${a.open || (S.view === "faults" && (a.openFaults || a.frankOpen)) ? "" : " clear"}" data-open="${open ? 1 : 0}">
+    <button class="head" data-t="${a.apt.id}" aria-expanded="${open}"><div class="m"><div class="name">${esc(a.apt.name)}${a.apt.new ? '<span class="tag">חדשה</span>' : ""}</div><div class="sub num">${esc(subBits.join(" · "))}</div></div>${pill}<span class="chev">${CHEV}</span></button>${body}</section>`;
+}
+function render() {
+  const app = document.getElementById("app");
+  if (!S.data) { app.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "טוען…"}</div>`; return; }
+  const all = S.data.apts;
+  const openApts = all.filter(a => a.open);
+  const openCount = all.reduce((t, a) => t + a.open, 0);
+  const faultApts = all.filter(a => a.openFaults || a.frankOpen);
+  const list = S.view === "open" ? openApts : S.view === "faults" ? faultApts : S.view === "new" ? all.filter(a => a.apt.new) : all;
+  const chip = (v, l) => `<button class="chip" data-v="${v}" aria-pressed="${S.view === v}">${l}</button>`;
+  const frankNote = S.data.frankState === "ok" ? "" : S.data.frankState === "snapshot" ? " · סטטוס פרנק נכון ל-" + fmt(S.data.frankAt) : " · סטטוס פרנק לא זמין כרגע";
+  app.innerHTML = `<header class="top"><h1>פערים בדירות</h1>
+    <div class="sum num"><b>${openCount}</b> חוסרים פתוחים ב-<b>${openApts.length}</b> מתוך ${all.length} דירות${frankNote}</div>
+    <div class="chips" role="group" aria-label="סינון">${chip("open", "חוסרים")}${chip("faults", "תקלות ופרנק")}${chip("new", "דירות חדשות")}${chip("all", "כל " + all.length)}</div></header>
+    <main>${list.map(card).join("") || '<div class="empty">אין פערים פתוחים. הכל הושלם.</div>'}</main>
+    <p class="foot${S.err ? " err" : ""}">${S.err ? esc(S.err) : "כל סימון נשמר במסד של אפליקציית הבדיקות, ומופיע לכולם גם אחרי רענון. עודכן " + new Date(S.data.loadedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) + "."}</p>`;
+}
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 3500); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
+  if (d.v) { S.view = d.v; render(); return; }
+  if (d.t) { S.open[d.t] = !S.open[d.t]; render(); return; }
+  if (d.a && d.i) {
+    if (S.pending[d.a] && d.i in S.pending[d.a]) return; // one write per item at a time
+    const a = S.data.apts.find(x => x.apt.id === d.a); const x = [...a.items, ...a.faults].find(y => y.id === d.i);
+    const next = !x.done;
+    (S.pending[a.apt.id] ||= {})[x.id] = next; applyPending(a); render();
+    M.saveCheck(a.apt.id, x.id, next).then(() => { delete S.pending[a.apt.id][x.id]; return load(); })
+      .catch(() => { delete S.pending[a.apt.id][x.id]; toast("הסימון לא נשמר. בדקו חיבור ונסו שוב."); load(); });
+  }
+});
+load();
+setInterval(() => { if (!document.hidden) load(); }, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
