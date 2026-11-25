@@ -2814,7 +2814,8 @@ const LiveChips = ({ id }) => {
   const l = liveFor(useLive(), id);
   if (!l.loaded) return null;
   return h(React.Fragment, null,
-    l.guestOpen.length > 0 && h("span", { className: "rounded-full border border-red-400/60 bg-red-500/20 px-2 py-0.5 font-semibold text-red-100" }, "תקלות אורחים ", l.guestOpen.length),
+    l.guestOpen.some((x) => x.status !== "in_progress") && h("span", { className: "rounded-full border border-red-400/60 bg-red-500/20 px-2 py-0.5 font-semibold text-red-100" }, "תקלות אורחים ", l.guestOpen.filter((x) => x.status !== "in_progress").length),
+    l.guestOpen.some((x) => x.status === "in_progress") && h("span", { className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-amber-100" }, "בטיפול ", l.guestOpen.filter((x) => x.status === "in_progress").length),
     l.frankOpen.length > 0 && h("span", { className: "rounded-full border border-sky-300/40 bg-sky-400/10 px-2 py-0.5 text-sky-100" }, "פרנק ", l.frankOpen.length));
 };
 const LivePanel = ({ property }) => {
