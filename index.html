@@ -241,7 +241,7 @@ const ADDED_PROPERTIES = [
   { id: "cusco-i10", name: "Cuzco I10", building: "temple-soleil", capacity: 5, doubleBeds: 0, code: "2904" }
 ];
 // No longer ours (Joker C3: Omer's own home, not a guest apartment): hidden from every list. Ids and their inspections stay stored (Firebase + device).
-const HIDDEN_PROPERTY_IDS = new Set(["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6"]); // joker-c3 stays visible: Omer's own apartment, 40 = 39 rentals + C3 (17.11.2026)
+const HIDDEN_PROPERTY_IDS = new Set(["altineige-28", "glaciers-7", "glaciers-31", "joker-b3", "joker-b4", "joker-b6", "cusco-e10"]); // cusco-e10: not ours (Omer, 24.11.2026); I10 is the Cusco apartment. // joker-c3 stays visible: Omer's own apartment, 40 = 39 rentals + C3 (17.11.2026)
 // Saved lists (device / Firebase) predate the new apartments: append any that are missing.
 const withAddedProperties = (list) => {
   if (!Array.isArray(list)) return list;
