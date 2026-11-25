@@ -2782,7 +2782,7 @@ const liveEmit = () => liveStore.subs.forEach((f) => f());
 const startLive = () => {
   if (liveStore.started) return;
   liveStore.started = true;
-  db.ref("guestIssues").on("value", (s) => { liveStore.guest = s.val() || {}; liveEmit(); }, () => { liveStore.guest = {}; liveEmit(); });
+  db.ref("guestIssues").on("value", (s) => { liveStore.guest = s.val() || {}; liveEmit(); }, () => { liveStore.guestError = true; liveEmit(); });
   const loadFrank = () => fetch("/api/frank", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ state: "unavailable", tasks: [], marks: [] }))
     .then((fr) => fr.state === "ok" ? fr : db.ref("gapChecks/frankSnapshot").once("value").then((s) => {
       const snap = s.val();
@@ -2799,14 +2799,14 @@ const useLive = () => {
 };
 const GUEST_OPEN = ["open", "needs_review", "in_progress"];
 const liveFor = (live, id) => {
-  const items = Object.entries((live.guest && live.guest[id] && live.guest[id].items) || {}).map(([key, x]) => ({ key, ...x }))
+  const items = Object.entries((live.guest && live.guest[id] && live.guest[id].items) || {}).map(([key, x]) => ({ ...x, key, summary: String((x && x.summary) || "") }))
     .sort((a, b) => String(b.reportedAt || "").localeCompare(String(a.reportedAt || "")));
   const guestOpen = items.filter((x) => GUEST_OPEN.includes(x.status));
   const guestDone = items.filter((x) => !GUEST_OPEN.includes(x.status));
   const fr = live.frank || { tasks: [], marks: [] };
   const marks = {}; (fr.marks || []).forEach((m) => { marks[m.task_id] = m; });
   const frank = (fr.tasks || []).filter((t) => t.apt === id).map((t) => ({ ...t, mark: marks[t.id] || null }));
-  return { guestOpen, guestDone, frankOpen: frank.filter((t) => !t.mark || t.mark.status !== "done"), frankDone: frank.filter((t) => t.mark && t.mark.status === "done"), frankState: fr.state, frankAt: fr.at || fr.checkedAt || null, loaded: live.guest !== null };
+  return { guestOpen, guestDone, frankOpen: frank.filter((t) => !t.mark || t.mark.status !== "done"), frankDone: frank.filter((t) => t.mark && t.mark.status === "done"), frankState: fr.state, frankAt: fr.at || fr.checkedAt || null, frankMissing: !(fr.tasks || []).length, loaded: live.guest !== null && live.frank !== null, guestError: !!live.guestError };
 };
 const fmtLive = (iso) => { try { return new Intl.DateTimeFormat("he-IL", { timeZone: "Europe/Paris", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)); } catch (e) { return ""; } };
 const LiveChips = ({ id }) => {
@@ -2829,13 +2829,14 @@ const LivePanel = ({ property }) => {
       .catch((e) => setErr("השמירה לא הצליחה: " + (e.message || "")))
       .finally(() => setBusy(null));
   };
-  if (!l.loaded) return null;
+  if (!l.loaded) return l.guestError ? h("div", { className: "rounded-2xl glass border border-red-400/40 p-4 text-[14px] text-red-100" }, "תקלות האורחים לא נטענו. יש לרענן את העמוד.") : null;
   const row = "flex items-start justify-between gap-3 rounded-xl bg-white/[0.04] border border-white/10 p-3";
   return h("section", { className: "rounded-2xl glass border border-white/10 p-4 space-y-3", "aria-label": "פתוח עכשיו בדירה" },
     h("div", { className: "flex items-baseline justify-between" },
       h("h3", { className: "text-base font-semibold text-ice-50" }, "פתוח עכשיו"),
       h("span", { className: "text-[12px] text-ice-50/60" }, l.guestOpen.length + l.frankOpen.length ? `${l.guestOpen.length + l.frankOpen.length} פתוחים` : "אין פתוחים")),
     err && h("div", { className: "text-[13px] text-red-200" }, err),
+    l.frankMissing && h("div", { className: "text-[12px] text-amber-200" }, "התיקונים של פרנק לא נטענו כרגע."),
     l.guestOpen.map((x) => h("div", { key: x.key, className: row },
       h("div", { className: "min-w-0" },
         h("div", { className: "text-[15px] text-ice-50 leading-snug" }, x.summary),

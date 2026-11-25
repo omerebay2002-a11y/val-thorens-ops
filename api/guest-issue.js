@@ -6,6 +6,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
+  // Ops has no login by design (Omer, rule 12): anyone with the link can already edit every inspection. This button is
+  // limited to the app itself (same origin) and to two statuses; it cannot read issues or change their text.
+  const origin = req.headers.origin || "";
+  if (!/^https:\/\/val-thorens(-ops|-[a-z0-9]+-omerebay2002-3855s-projects)\.vercel\.app$/.test(origin)) return res.status(403).json({ error: "origin" });
   const key = process.env.EITAN_ACCESS_KEY || "";
   if (!key) return res.status(503).json({ error: "החיבור לתקלות לא הוגדר" });
   let body = req.body;
